@@ -1,0 +1,45 @@
+## La Arquitectura U-Net: Fundamentos y Mecánica
+La arquitectura U-Net es el estándar de facto para la segmentación semántica (clasificación densa píxel por píxel). A diferencia de las redes de clasificación tradicionales que colapsan una imagen en un vector, U-Net mantiene y reconstruye la resolución espacial.
+
+### 1.1. Mecánica de Ingeniería:
+U-Net es una red neuronal convolucional (CNN) simétrica dividida en tres fases:
+
+- Camino de Contracción (Encoder): Captura el contexto global. Aplica convoluciones sucesivas (extracción de características) seguidas de una función de activación no lineal, típicamente la Unidad Lineal Rectificada, definida como $f(x)=\max(0,x)$. Luego, aplica max-pooling para reducir la resolución espacial a la mitad, doblando simultáneamente la profundidad de los canales.
+
+¿Qué es el max-pooling?
+es un filtro que recorre una imagen para quedarse solo con lo más importante (el valor máximo) de cada sección.
+
+suponiendo que convertimos la imagen en matriz:
+1	3	2	1
+4	2	0	5
+1	2	6	2
+3	1	3	8
+
+aplicamos las siguientes reglas:
+
+Vamos a usar la configuración más común en redes neuronales:
+Filtro: 2x2 (miramos cuadritos de 2 de ancho por 2 de alto).
+Salto (Stride): 2 (nos movemos 2 espacios cada vez para no repetir números).
+
+El proceso (Paso a paso)
+Esquina superior izquierda: Mira el bloque de 
+. ¿Cuál es el mayor? Es el 4. Anótalo.
+Esquina superior derecha: Mira el bloque de 
+. ¿Cuál es el mayor? Es el 5. Anótalo al lado del 4.
+Esquina inferior izquierda: Mira el bloque de 
+. ¿Cuál es el mayor? Es el 3. Anótalo debajo del 4.
+Esquina inferior derecha: Mira el bloque de 
+. ¿Cuál es el mayor? Es el 8. Anótalo al lado del 3.
+
+se ocnvierte en una matriz 2x2:
+4	5
+3	8
+
+
+- Cuello de Botella (Bottleneck): El punto de máxima abstracción semántica y menor resolución espacial.
+
+- Camino Expansivo (Decoder): Reconstruye la resolución espacial mediante convoluciones transpuestas (upsampling).
+
+- Conexiones de Salto (Skip Connections): Es la innovación principal. Concatenan mapas de características de alta resolución del encoder directamente con las capas correspondientes del decoder. Esto fusiona el contexto global (baja resolución) con detalles espaciales finos (alta resolución).
+
+(imagenes/unet1.png)
