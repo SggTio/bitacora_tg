@@ -44,4 +44,4 @@ se convierte en una matriz 2x2:
 
 - Conexiones de Salto (Skip Connections): Es la innovación principal. Concatenan mapas de características de alta resolución del encoder directamente con las capas correspondientes del decoder. Esto fusiona el contexto global (baja resolución) con detalles espaciales finos (alta resolución).
 
-![visualización de una U-net](../imágenes/unet1.pngg)
+![visualización de una U-net](../imágenes/unet1.png)
