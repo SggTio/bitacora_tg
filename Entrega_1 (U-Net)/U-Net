@@ -1,6 +1,8 @@
 ## La Arquitectura U-Net: Fundamentos y Mecánica
 La arquitectura U-Net es el estándar de facto para la segmentación semántica (clasificación densa píxel por píxel). A diferencia de las redes de clasificación tradicionales que colapsan una imagen en un vector, U-Net mantiene y reconstruye la resolución espacial.
 
+(expandir en ésta idea)
+
 ### 1.1. Mecánica de Ingeniería:
 U-Net es una red neuronal convolucional (CNN) simétrica dividida en tres fases:
 
@@ -31,7 +33,7 @@ Esquina inferior izquierda: Mira el bloque de
 Esquina inferior derecha: Mira el bloque de 
 . ¿Cuál es el mayor? Es el 8. Anótalo al lado del 3.
 
-se ocnvierte en una matriz 2x2:
+se convierte en una matriz 2x2:
 4	5
 3	8
 
@@ -42,4 +44,4 @@ se ocnvierte en una matriz 2x2:
 
 - Conexiones de Salto (Skip Connections): Es la innovación principal. Concatenan mapas de características de alta resolución del encoder directamente con las capas correspondientes del decoder. Esto fusiona el contexto global (baja resolución) con detalles espaciales finos (alta resolución).
 
-![visualización de una U-net](../imágenes/unet1.png)
+![visualización de una U-net](../imágenes/unet1.pngg)

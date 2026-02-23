@@ -97,9 +97,9 @@ Son, además, proyecciones png de imágenes crudas, antes de procesar
 
 | imagen | Visualización |
 |---|---|
-| Vista 1 | ![V1](../imágenes/vista1.png) |
-| Vsita 2 | ![V2l](../imagenes/vista2.png) |
-| Vista 3 | ![V3](../imagenes/vista3.png) |
+| Vista 1 | ![V1](../imágenes/vista1.png) 
+| Vsita 2 | ![V2l](../imágenes/vista2.png) 
+| Vista 3 | ![V3](../imágenes/vista3.png) 
 
 
 *tabla 1. Imágenes crudas extraídas como proyecciones png del conjunto de datos [1].*
