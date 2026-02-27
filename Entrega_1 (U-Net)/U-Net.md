@@ -4,12 +4,68 @@ La arquitectura U-Net es el estándar de facto para la segmentación semántica 
 ![visualización de una U-net](../imágenes/unet1.png)
 
 ### 1.1. Mecánica de Ingeniería:
-U-Net es una red neuronal convolucional (CNN) simétrica dividida en tres fases operativas principales:Camino de Contracción (Encoder): Su objetivo es capturar el contexto global. Aplica convoluciones sucesivas seguidas de una función de activación no lineal, típicamente ReLU, definida como $f(x)=\max(0,x)$. Luego, aplica max-pooling para reducir la resolución espacial a la mitad, doblando la profundidad de los canales.Cuello de Botella (Bottleneck): Es el punto de máxima abstracción semántica y menor resolución espacial.Camino Expansivo (Decoder): Reconstruye la resolución espacial requerida para una máscara de segmentación perfecta mediante convoluciones transpuestas (upsampling).Conexiones de Salto (Skip Connections): Es la innovación crítica. Concatenan mapas de características de alta resolución del encoder directamente con el decoder. Esto fusiona el contexto global (baja resolución pero semántica profunda) con detalles espaciales finos (alta resolución geométrica).
+U-Net es una red neuronal convolucional (CNN) simétrica dividida en tres fases operativas principales:
+
+### Camino de Contracción (Encoder): 
+
+Su objetivo es capturar el contexto global. Aplica convoluciones sucesivas seguidas de una función de activación no lineal, típicamente ReLU, definida como $f(x)=\max(0,x)$. Luego, aplica max-pooling para reducir la resolución espacial a la mitad, doblando la profundidad de los canales.
+
+### Cuello de Botella (Bottleneck): 
+
+Es el punto de máxima abstracción semántica y menor resolución espacial.
+
+### Camino Expansivo (Decoder): 
+
+Reconstruye la resolución espacial requerida para una máscara de segmentación perfecta mediante convoluciones transpuestas (upsampling).
+
+### Conexiones de Salto (Skip Connections): 
+
+Es la innovación crítica. Concatenan mapas de características de alta resolución del encoder directamente con el decoder. Esto fusiona el contexto global (baja resolución pero semántica profunda) con detalles espaciales finos (alta resolución geométrica). Esto es, no todo pasa hasta el bottleneck, sino que se permite que algunas características se pasen directamente al proceso del decoder, para aumentar la fidelidad de reconstrucción de la imagen.
+
+### Veamos algunos ejemplos:
+
+*Colapso de Vectores vs. Reconstrucción Espacial (U-Net)*:
+Busquemos entender por qué es importante usar la U-net.
+El colapso de vectores (el isomorfismo que existe entre una matriz $3x3$ y $R9$) daña la noción de cercanía que se tiene cuando vemos los vectores en el espacio versus como podemos entenderlos cuando los vemos "estirados" en $R9$.
+
+*Ejemplo Numérico:*
+
+Imaginemos una matriz de entradas $3 \times 3$ que representa una característica geométrica simple (una línea diagonal):
+$$I = \begin{bmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \end{bmatrix}$$
+
+Clasificación Estándar (Vector Collapse): 
+Antes de la capa densa final, la matriz se aplana en un vector 1D: 
+$V = [1, 0, 0, 0, 1, 0, 0, 0, 1]$. 
+En este espacio $\mathbb{R}^9$, la distancia entre el primer '1' y el segundo '1' es de 3 índices. 
+
+Esto significa que La red pierde la noción de que espacialmente estaban conectados (vecindad diagonal) y la geometría se destruye.
+
+Segmentación Densa (U-Net): 
+El tensor se comprime en el bottleneck a, digamos, un tensor de $1 \times 1 \times C$, pero la ruta expansiva (Decoder) y las Skip Connections fuerzan a la red a mapear las características latentes de vuelta a la cuadrícula $\mathbb{Z}^2$. 
+La salida reconstruye un tensor $3 \times 3$ donde la relación de vecindad se preserva intacta para clasificar si cada píxel pertenece o no a un meningioma, por poner un ejemplo.
+
+![ejemplo del uso de un skip connection en Unet](../videos/skip_connections.gif)
 
 *Ejemplo Dinámico: Max-Pooling Paso a Paso*
-El max-pooling es un filtro que recorre una matriz quedándose solo con el valor dominante, abstrayendo la característica y reduciendo el tamaño.Si tenemos una matriz de $4 \times 4$:$$I = \begin{bmatrix} 1 & 3 & 2 & 1 \\ 4 & 2 & 0 & 5 \\ 1 & 2 & 6 & 2 \\ 3 & 1 & 3 & 8 \end{bmatrix}$$
+El max-pooling es un filtro que recorre una matriz quedándose solo con el valor dominante, abstrayendo la característica y reduciendo el tamaño. El operador de Max-Pooling no solo abstrae características, sino que altera la dimensionalidad del tensor. Supongamos un canal de entrada: 
 
-Usando un filtro de $2 \times 2$ con un salto (stride) de 2, la operación extrae el máximo de cada sub-cuadrante:Cuadrante superior izquierdo: $\max(1, 3, 4, 2) = 4$Cuadrante superior derecho: $\max(2, 1, 0, 5) = 5$Cuadrante inferior izquierdo: $\max(1, 2, 3, 1) = 3$Cuadrante inferior derecho: $\max(6, 2, 3, 8) = 8$Matriz resultante $2 \times 2$:$$Y = \begin{bmatrix} 4 & 5 \\ 3 & 8 \end{bmatrix}$$
+$I \in \mathbb{R}^{4 \times 4}$:$$I = \begin{bmatrix}\mathbf{1} & \mathbf{3} & \mathit{2} & \mathit{1} \\mathbf{4} & \mathbf{2} & \mathit{0} & \mathit{5} \1 & 2 & \mathbf{6} & \mathbf{2} \3 & 1 & \mathbf{3} & \mathbf{8}\end{bmatrix}$$
+
+Usando un filtro de $2 \times 2$ con un salto (stride) de 2, el proceso mapea ésta matriz a un espacio más grueso, una grilla más gruesa  (coarse grid) $Y \in \mathbb{R}^{2 \times 2}$. la operación extrae el máximo de cada sub-cuadrante:
+
+Cuadrante superior izquierdo: $\max(1, 3, 4, 2) = 4$
+Cuadrante superior derecho: $\max(2, 1, 0, 5) = 5$
+Cuadrante inferior izquierdo: $\max(1, 2, 3, 1) = 3$
+Cuadrante inferior derecho: $\max(6, 2, 3, 8) = 8$
+
+así pues:
+$Y_{1,1} = \max(1, 3, 4, 2) = 4$
+$Y_{1,2} = \max(2, 1, 0, 5) = 5$
+$Y_{2,1} = \max(1, 2, 3, 1) = 3$
+$Y_{2,2} = \max(6, 2, 3, 8) = 8$
+
+Y con ésto: Tenemos la Matriz resultante $2 \times 2$: $$Y = \begin{bmatrix} 4 & 5 \\ 3 & 8 \end{bmatrix}$$
+
 
 Ejemplo visual:
 ![ejemplo de maxpooling](../imágenes/maxpool_ejemplo.png)
@@ -20,27 +76,46 @@ Más allá de su concepción de implementación, se ha demostrado que la arquite
 
 ### 2.1. La Red Neuronal como un Sistema Dinámico
 
-En el marco del control óptimo, la propagación de un tensor a través de las capas de la red neuronal se modela como la discretización de una Ecuación Diferencial Ordinaria (EDO). Si tratamos la profundidad de la red como un tiempo continuo $t \in [0, T]$, la transformación del mapa de características $x(t)$ se rige por:$$\frac{dx}{dt} = f(x(t), \theta(t), t)$$Donde $x(0)$ es la imagen médica de entrada y $x(T)$ es la máscara de segmentación final. El objetivo del entrenamiento es encontrar la trayectoria de los parámetros (los pesos) $\theta(t)$ que minimicen una función de coste funcional (la pérdida empírica, como el Coeficiente Dice), sujeta a la dinámica del sistema. 
+En el marco del control óptimo, la propagación hacia adelante (forward pass) de un tensor a través de las capas de la red neuronal se modela como la discretización de una Ecuación Diferencial Ordinaria (EDO). Si tratamos la profundidad de la red como un tiempo continuo $t \in [0, T]$, la transformación del mapa de características $x(t)$  se modela rigurosamente como la evolución de $x(t)$ sujeto a un campo vectorial parametrizado por $\theta(t)$ (los pesos convolucionales):
 
-En este paradigma, el algoritmo de backpropagation no es más que la resolución de las ecuaciones adjuntas del Principio del Máximo de Pontryagin.
+$$\dot{x}(t) = \mathcal{F}(x(t), \theta(t))$$
 
-(explicar más sobre Pontryagin)
+o visto de otra manera:
+
+$$\frac{dx}{dt} = f(x(t), \theta(t), t)$$
+
+Donde $x(0)$ es la imagen médica de entrada y $x(T)$ es la máscara de segmentación final. El objetivo del entrenamiento es encontrar la trayectoria de los parámetros (los pesos convolucionales) $\theta(t)$ que minimicen una función de coste funcional (la pérdida empírica, como el Coeficiente Dice), sujeta a la dinámica del sistema. 
+
+Minimizar la pérdida final (ej. Dice) es equivalente a resolver un problema de Control Óptimo, donde el algoritmo de Backpropagation actúa calculando el estado adjunto (costate) del sistema según el Principio del Máximo de Pontryagin.
+
 
 ### 2.2. U-Net como un Ciclo-V (V-Cycle) Multigrilla
 
-El problema de optimizar tensores masivos de alta resolución (como un corte de MRI) es extremadamente costoso, ya que los gradientes se estancan tratando de corregir errores globales. Aquí es donde la U-Net emula exactamente un Algoritmo Multigrilla en Ciclo-V.
+El problema de optimizar tensores masivos de alta resolución (como un corte de MRI) es extremadamente costoso numéricamente, ya que los gradientes se estancan tratando de corregir errores globales. Aquí es donde la U-Net emula exactamente un Algoritmo Multigrilla en Ciclo-V.
 
-Al resolver ecuaciones diferenciales espaciales, los solucionadores iterativos (como Gauss-Seidel por poner un ejempl) eliminan rápidamente el error de alta frecuencia (ruido local), pero son ineficientes contra el error de baja frecuencia (desviaciones estructurales globales).
+Al resolver ecuaciones diferenciales espaciales, los solucionadores iterativos (como el método de Gauss-Seidel) eliminan rápidamente el error de alta frecuencia (ruido local y bordes), pero son matemáticamente ineficientes contra el error de baja frecuencia (desviaciones estructurales globales). La U-Net soluciona esto manipulando la resolución del dominio $\Omega$:
 
-La U-Net soluciona esto manipulando la resolución del dominio:
+- Suavizado inicial (Smoother):
+Las primeras convoluciones extraen características y eliminan el error local de alta frecuencia.
 
-- Suavizado inicial: Las primeras convoluciones eliminan el error local.
+- Operador de Restricción ($I_h^{2h}$) (Encoder):
+Matemáticamente, es una proyección lineal que transfiere un vector del espacio fino $\Omega_h$ al espacio grueso $\Omega_{2h}$. En la U-Net, esto se implementa mediante el Max-Pooling. Al extraer el máximo de un bloque $2 \times 2$, el operador filtra el detalle local. En esta grilla reducida, las variaciones globales (baja frecuencia) se "comprimen" espacialmente, transformándose en altas frecuencias relativas, lo que permite que las convoluciones profundas las resuelvan en pasos computacionales mínimos.
+*Ejemplo operacional:* 
+Un vector fino $x_h = [1, 5, 2, 8]$ restringido con un factor de 2 usando la norma máxima (el máximo entre ambos), se descompone entonces en los siguientes pasos:
+paso 1: $x_h1 = [1, 5]$ y dado que tomamos el máximo entonces se queda el $5$.
+Paso 2: $x_h2 = [2, 8]$ y dado que tomamos el máximo entonces se queda el $8$.
+Así, ese vector inicial $x_h = [1, 5, 2, 8]$ se convierte en $x_{2h} = I_h^{2h} x_h = [5, 8]$.
 
-- Restricción (Encoder): El max-pooling proyecta el dominio espacial a una grilla más gruesa. En esta grilla reducida, las variaciones globales de baja frecuencia se "comprimen" y se transforman en altas frecuencias, permitiendo que las convoluciones profundas las capturen y resuelvan eficientemente.
+- Operador de Prolongación ($I_{2h}^h$) (Decoder): 
+Es el mapeo inverso. Toma la solución calculada en el espacio latente grueso $\Omega_{2h}$ y la interpola de vuelta a la grilla fina $\Omega_h$ original. En la red, esto es la Convolución Transpuesta (Upsampling).
+*Ejemplo operacional:*
+Prolongar el vector $x_{2h} = [5, 8]$ mediante interpolación del vecino más cercano produce una aproximación en bloque $x_h' = I_{2h}^h x_{2h} = [5, 5, 8, 8]$.
 
-- Prolongación (Decoder): La solución aproximada en la grilla gruesa se interpola de vuelta a la grilla fina mediante convoluciones transpuestas.
+- Precondicionamiento de Error (Skip Connections): 
+Como se observa en el ejemplo anterior, la prolongación pura ($[5, 5, 8, 8]$) destruye la geometría original ($[1, 5, 2, 8]$). 
+Las conexiones de salto actúan como un precondicionador del sistema: inyectan el estado exacto de los bordes de la grilla fina directamente en el paso de prolongación ($x_h \oplus x_h'$), corrigiendo el error de interpolación algorítmicamente en cada nivel del ciclo.
 
-- Precondicionamiento de Error (Skip Connections): La interpolación pura difumina la geometría. Las conexiones de salto actúan como un precondicionador matemático: inyectan la solución exacta de los bordes de la grilla fina directamente en el paso de prolongación, corrigiendo el error de interpolación en cada nivel.
+![Implementación de una Multigrilla](../videos/gif_grillas.gif)
 
 
 | Concepto de Control Óptimo / Multigrilla | Equivalente en la Arquitectura U-Net | Función Matemática y Mecánica |
@@ -70,6 +145,51 @@ Combina la geometría de SegNet (usando índices de unpooling) con la riqueza se
 Dicho de otra forma, Usa los índices de SegNet para colocar los píxeles en su lugar geométrico exacto (unpooling) y luego aplica las conexiones de salto (skip connections) de U-Net para rellenar la semántica y textura.
 
 ![Cómo se ve el proceso de desempacar el codificador (encoder - Decoder)](../imágenes/upsampling.png)
+
+### 3.3. revisemos diferencias:
+
+*Índices de Seg-UNet y Max-Unpooling*
+Para que la diferencia geométrica entre SegNet y U-Net sea evidente, usaremos una matriz de seguimiento de índices (ArgMax).
+
+Cálculo Analítico del Unpooling Exacto:
+
+- Fase de Restricción (Max-Pooling + Tracking):
+Dada la matriz $I \in \mathbb{R}^{4 \times 4}$, aplicamos el Max-Pooling, pero la función simultáneamente genera una matriz de máscara $M$ que captura la coordenada abstracta $(p,q)$ del escalar victorioso.
+$$I = \begin{bmatrix} 1 & 3 & 2 & 1 \\ \mathbf{4} & 2 & 0 & \mathbf{5} \\ 1 & 2 & \mathbf{6} & 2 \\ \mathbf{3} & 1 & 3 & 8 \end{bmatrix} \xrightarrow{\text{Max-Pool}} Y = \begin{bmatrix} 4 & 5 \\ 3 & 8 \end{bmatrix}, \quad M = \begin{bmatrix} (1,0) & (1,3) \\ (3,0) & (2,2) \end{bmatrix}$$
+
+- Fase de Prolongación (Max-Unpooling):
+En el decodificador, la Seg-UNet recibe un tensor procesado latente $Z \in \mathbb{R}^{2 \times 2}$. Asumamos que tras varias convoluciones, los valores latentes se actualizaron a:
+$$Z = \begin{bmatrix} 10 & 20 \\ 15 & 30 \end{bmatrix}$$
+El operador de Max-Unpooling inicializa un tensor nulo $\mathbb{R}^{4 \times 4}$ y utiliza los índices guardados en la máscara $M$ para enrutar los valores de $Z$ a sus posiciones espaciales métricas exactas:
+
+$$Z_{unpooled} = \begin{bmatrix}0 & 0 & 0 & 0 \\mathbf{10} & 0 & 0 & \mathbf{20} \0 & 0 & \mathbf{30} & 0 \\mathbf{15} & 0 & 0 & 0\end{bmatrix}$$
+
+Las convoluciones subsecuentes y las Skip Connections rellenarán los ceros, pero el anclaje espacial de los bordes biológicos (como en el caso de segmentar un tumor) ha sido restaurado con precisión sub-píxel.5. 
+
+- El Fallo de las Métricas Locales (Dice / Cross-Entropy):
+Aquí se demuestra matemáticamente por qué optimizar el coeficiente de Dice ($\frac{2|X \cap Y|}{|X| + |Y|}$) no garantiza coherencia estructural en tejidos (como segmentar un meningioma masivo).
+
+*Ejemplo 1:* 
+Matriz 3x3 (El Anillo Vascular)
+El "Ground Truth" ($GT$) es un anillo capilar continuo (8 píxeles periféricos, 1 agujero central).La "Predicción" ($P$) rompe la continuidad vascular fallando en un solo píxel inferior.
+$$GT = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 0 & 1 \\ 1 & 1 & 1 \end{bmatrix} \quad P = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 0 & 1 \\ 1 & 0 & 1 \end{bmatrix}$$
+
+Evaluación Métrica (Dice): $|GT| = 8$, $|P| = 7$, $|GT \cap P| = 7$.$$Dice = \frac{2(7)}{8 + 7} = \frac{14}{15} \approx 0.933$$
+
+¡La red obtiene un 93.3% de precisión! A los ojos de la función de pérdida empírica, es un modelo excelente.
+
+- Evaluación Topológica (Homología):
+En $GT$, hay un ciclo cerrado que envuelve un agujero bidimensional, por tanto su invariante de Betti es $\beta_1 = 1$.En $P$, el anillo se rompió. Se convirtió en una curva abierta que puede contraerse a un solo punto (homotópicamente equivalente a un punto). Por tanto, $\beta_1 = 0$. El error topológico es del 100%.
+
+*Ejemplo 2:* 
+Matriz 5x5 (El Meningioma Sólido)
+Un meningioma suele ser una masa sólida continua ($\beta_0 = 1, \beta_1 = 0$). La red predice casi toda la masa perfectamente, pero comete un error de falso negativo dentro del núcleo, creando un agujero artificial.
+$$GT = \begin{bmatrix} 0 & 1 & 1 & 1 & 0 \\ 0 & 1 & 1 & 1 & 0 \\ 0 & 1 & 1 & 1 & 0 \\ 0 & 0 & 0 & 0 & 0 \end{bmatrix} \quad P = \begin{bmatrix} 0 & 1 & 1 & 1 & 0 \\ 0 & 1 & \mathbf{0} & 1 & 0 \\ 0 & 1 & 1 & 1 & 0 \\ 0 & 0 & 0 & 0 & 0 \end{bmatrix}$$
+Dice: $|GT| = 9$, $|P| = 8$, $|GT \cap P| = 8$. $Dice = \frac{16}{17} \approx 0.941$ (94.1% de precisión).
+
+- Topología: $GT$ tiene $\beta_1 = 0$ (esfera topológica). $P$ ha creado un agujero ($\beta_1 = 1$). Modificó la firma geométrica de la patología biológica severamente, lo cual es inaceptable para simulación pre-quirúrgica.
+
+![Visualmente, éstos ejemplos se ven así.](../videos/video_ejemplos_final.gif)
 
 ## 4. El Salto Topológico: TDA-SegUNet y Geometría Global
 
