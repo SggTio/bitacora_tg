@@ -102,3 +102,5 @@ $\beta_0$: Número de componentes conectadas (masas de tejido).$\beta_1$: Númer
 Al barrer un umbral de intensidad sobre la imagen (filtración), registramos cuándo "nace" y "muere" una característica topológica. Esto genera un Diagrama de Persistencia. Gracias al Teorema de Estabilidad, sabemos que este diagrama es matemáticamente robusto al ruido.Para que la red neuronal lo procese, el diagrama se convierte en una Imagen de Persistencia (PI) aplicando funciones Gaussianas bidimensionales ponderadas por la vida útil (persistencia) de cada característica.
 
 4.3. Implementación: TDA-SegUNetLa red modifica su capa de entrada. En lugar de recibir solo el canal de la imagen MRI, concatena los tensores de las Imágenes de Persistencia ($\beta_0$ y $\beta_1$).La red aprende simultáneamente:Los gradientes de intensidad locales (de la MRI).Las reglas irrebatibles de topología global (de las PI).
+
+![Ejemplo de bordes difusos](../videos/evolucion_pool.png)
