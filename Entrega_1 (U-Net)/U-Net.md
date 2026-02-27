@@ -77,7 +77,7 @@ Dicho de otra forma, Usa los índices de SegNet para colocar los píxeles en su 
 
 En una arquitectura U-Net o CNN estándar, el Max-Pooling actúa como un filtro de abstracción agresivo. Al quedarse solo con el valor máximo de una ventana (ej. 2x2), la red "olvida" en qué píxel exacto residía esa intensidad. Cuando el Decoder intenta reconstruir la imagen mediante Upsampling Bilineal o Convoluciones Transpuestas, se ve obligado a "adivinar" o promediar la posición de los datos. El resultado es un borde difuso que en las aplicaciones médicas puede implicar tejido valioso o delicado.
 
-![Ejemplo de bordes difusos](../imágenes/image_proceso.png)
+![Ejemplo de bordes difusos](../imágenes/bordes.png)
 
 El gran problema de las CNN tradicionales es que optimizan funciones de pérdida (como Dice o Cross-Entropy) que asumen que cada píxel es independiente. Son ciegas a la topología.
 
@@ -103,4 +103,4 @@ Al barrer un umbral de intensidad sobre la imagen (filtración), registramos cu�
 
 4.3. Implementación: TDA-SegUNetLa red modifica su capa de entrada. En lugar de recibir solo el canal de la imagen MRI, concatena los tensores de las Imágenes de Persistencia ($\beta_0$ y $\beta_1$).La red aprende simultáneamente:Los gradientes de intensidad locales (de la MRI).Las reglas irrebatibles de topología global (de las PI).
 
-![Ejemplo de bordes difusos](../videos/evolucion_pool.png)
+![Evolución del proceso de convolución](../videos/evolucion_pool.gif)
