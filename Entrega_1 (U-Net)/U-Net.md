@@ -3,7 +3,7 @@
 La arquitectura U-Net es el estándar de facto para la segmentación semántica (clasificación densa píxel por píxel). A diferencia de las redes de clasificación tradicionales que colapsan una imagen en un vector perdiendo la noción del espacio, U-Net mantiene y reconstruye la resolución espacial geométrica.
 
 <div align="center">
-  <img src="../imágenes/unet1.png" width="80%">
+  <img src="../imágenes/unet1.png" width="600">
   <p><em>Figura 1: Visualización arquitectónica de una U-Net estándar.</em></p>
 </div>
 
@@ -32,7 +32,7 @@ $$I = \begin{bmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \end{bmatrix}$$
 | Antes de la capa densa, la matriz se aplana en 1D: <br> $V = [1, 0, 0, 0, 1, 0, 0, 0, 1]$. <br><br> En $\mathbb{R}^9$, la distancia entre el primer '1' y el segundo '1' es de 3 saltos. La red pierde la noción de conectividad (vecindad diagonal); **la geometría se destruye**. | El tensor se comprime en el *bottleneck*, pero la ruta expansiva y las *Skip Connections* fuerzan a la red a mapear las características de vuelta a la cuadrícula $\mathbb{Z}^2$. <br><br> La salida reconstruye el tensor $3 \times 3$ intacto, **preservando la relación de vecindad** para clasificar, por ejemplo, los bordes de un meningioma. |
 
 <div align="center">
-  <img src="../videos/skip_connections.gif" width="70%">
+  <img src="../videos/skip_connections.gif" width="450">
   <p><em>Animación 1: El rol de las Skip Connections en la preservación de la topología.</em></p>
 </div>
 
@@ -60,7 +60,7 @@ Matriz resultante:
 $$Y = \begin{bmatrix} 4 & 5 \\ 3 & 8 \end{bmatrix}$$
 
 <div align="center">
-  <img src="../imágenes/maxpool_ejemplo.png" width="60%">
+  <img src="../imágenes/maxpool_ejemplo.png" width="450">
 </div>
 
 ---
@@ -89,12 +89,12 @@ Optimizar tensores masivos de alta resolución (como un MRI) es numéricamente c
 4. **Precondicionamiento de Error (Skip Connections):** Como vimos, la prolongación destruye la geometría original ($[5, 5, 8, 8] \neq [1, 5, 2, 8]$). Las conexiones de salto inyectan el estado exacto de la grilla fina ($x_h \oplus x_h'$), corrigiendo algorítmicamente el error de interpolación en cada nivel.
 
 <div align="center">
-  <img src="../videos/gif_grillas.gif" width="70%">
+  <img src="../videos/gif_grillas.gif" width="450">
   <p><em>Animación 2: Simulación de Operadores Multigrilla en un Ciclo-V.</em></p>
 </div>
 
 <div align="center">
-  <img src="../imágenes/image_proceso.png" width="75%">
+  <img src="../imágenes/image_proceso.png" width="600">
 </div>
 
 ---
@@ -112,7 +112,7 @@ A diferencia de la U-Net que pasa densos mapas de características (pesados en m
 Seg-UNet combina la exactitud geométrica de SegNet (usando índices de unpooling) con la riqueza semántica de U-Net. Primero coloca los píxeles en su lugar geométrico exacto, y luego aplica las *Skip Connections* para rellenar la semántica y textura faltante con los mapas profundos del encoder.
 
 <div align="center">
-  <img src="../imágenes/upsampling.png" width="80%">
+  <img src="../imágenes/upsampling.png" width="600">
 </div>
 
 ### 3.3. Cálculo Analítico del Unpooling Exacto
@@ -121,6 +121,7 @@ Para evidenciar la diferencia geométrica, rastreemos la matriz de índices (*Ar
 
 **1. Fase de Restricción (Max-Pooling + Tracking):**
 Al aplicar Max-Pooling a $I \in \mathbb{R}^{4 \times 4}$, generamos simultáneamente una máscara $M$ que captura la coordenada del escalar victorioso.
+
 $$I = \begin{bmatrix} 
 1 & 3 & 2 & 1 \\ 
 \mathbf{4} & 2 & 0 & \mathbf{5} \\ 
@@ -134,7 +135,9 @@ M = \begin{bmatrix} (1,0) & (1,3) \\ (3,0) & (3,3) \end{bmatrix}$$
 
 **2. Fase de Prolongación (Max-Unpooling):**
 El decodificador recibe un tensor latente $Z \in \mathbb{R}^{2 \times 2}$ actualizado (ej. tras las convoluciones profundas):
+
 $$Z = \begin{bmatrix} 10 & 20 \\ 15 & 30 \end{bmatrix}$$
+
 El *Max-Unpooling* inicializa un tensor nulo $\mathbb{R}^{4 \times 4}$ y utiliza los índices de $M$ para enrutar los valores de $Z$ a sus posiciones espaciales métricas exactas:
 
 $$Z_{unpooled} = \begin{bmatrix}
@@ -154,10 +157,10 @@ Aquí demostramos matemáticamente por qué optimizar el coeficiente de Dice ($\
 
 | Ejemplo 1: El Anillo Vascular (Matriz 3x3) | Ejemplo 2: El Meningioma Sólido (Matriz 5x5) |
 | :--- | :--- |
-| El *Ground Truth* ($GT$) es un anillo continuo (1 agujero). La *Predicción* ($P$) falla en **un solo píxel** inferior.<br><br> $$GT = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 0 & 1 \\ 1 & 1 & 1 \end{bmatrix} \quad P = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 0 & 1 \\ 1 & \mathbf{0} & 1 \end{bmatrix}$$<br><br> **Evaluación Métrica (Dice):**<br>$|GT|=8, |P|=7, |GT \cap P|=7$.<br>$Dice = \frac{14}{15} \approx$ **0.933 (93.3%)**<br>*¡Un modelo excelente a ojos de la pérdida!*<br><br>**Evaluación Topológica:**<br>$GT$ tiene un ciclo cerrado ($\beta_1 = 1$). En $P$, el anillo se rompió ($\beta_1 = 0$). **El error topológico es del 100%.** | Un meningioma es una masa sólida continua ($\beta_1 = 0$). La red predice casi todo, pero crea un **agujero falso** dentro del núcleo.<br><br>$$GT = \begin{bmatrix} 0 & 1 & 1 & 1 & 0 \\ 0 & 1 & 1 & 1 & 0 \\ 0 & 1 & 1 & 1 & 0 \\ 0 & 0 & 0 & 0 & 0 \end{bmatrix} \quad P = \begin{bmatrix} 0 & 1 & 1 & 1 & 0 \\ 0 & 1 & \mathbf{0} & 1 & 0 \\ 0 & 1 & 1 & 1 & 0 \\ 0 & 0 & 0 & 0 & 0 \end{bmatrix}$$ <br><br> **Evaluación Métrica (Dice):**<br>$|GT|=9, |P|=8, |GT \cap P|=8$.<br>$Dice = \frac{16}{17} \approx$ **0.941 (94.1%)**<br><br>**Evaluación Topológica:**<br>$P$ creó una cavidad inexistente ($\beta_1 = 1$). Modificó la firma geométrica severamente, lo cual es inaceptable para simulación pre-quirúrgica. |
+| El *Ground Truth* ($GT$) es un anillo continuo (1 agujero). La *Predicción* ($P$) falla en **un solo píxel** inferior.<br><br> $GT = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 0 & 1 \\ 1 & 1 & 1 \end{bmatrix} \quad P = \begin{bmatrix} 1 & 1 & 1 \\ 1 & 0 & 1 \\ 1 & \mathbf{0} & 1 \end{bmatrix}$<br><br> **Evaluación Métrica (Dice):**<br>$|GT|=8, |P|=7, |GT \cap P|=7$.<br>$Dice = \frac{14}{15} \approx$ **0.933 (93.3%)**<br>*¡Un modelo excelente a ojos de la pérdida!*<br><br>**Evaluación Topológica:**<br>$GT$ tiene un ciclo cerrado ($\beta_1 = 1$). En $P$, el anillo se rompió ($\beta_1 = 0$). **El error topológico es del 100%.** | Un meningioma es una masa sólida continua ($\beta_1 = 0$). La red predice casi todo, pero crea un **agujero falso** dentro del núcleo.<br><br> $GT = \begin{bmatrix} 0 & 1 & 1 & 1 & 0 \\ 0 & 1 & 1 & 1 & 0 \\ 0 & 1 & 1 & 1 & 0 \\ 0 & 0 & 0 & 0 & 0 \end{bmatrix} \quad P = \begin{bmatrix} 0 & 1 & 1 & 1 & 0 \\ 0 & 1 & \mathbf{0} & 1 & 0 \\ 0 & 1 & 1 & 1 & 0 \\ 0 & 0 & 0 & 0 & 0 \end{bmatrix}$ <br><br> **Evaluación Métrica (Dice):**<br>$|GT|=9, |P|=8, |GT \cap P|=8$.<br>$Dice = \frac{16}{17} \approx$ **0.941 (94.1%)**<br><br>**Evaluación Topológica:**<br>$P$ creó una cavidad inexistente ($\beta_1 = 1$). Modificó la firma geométrica severamente, lo cual es inaceptable para simulación pre-quirúrgica. |
 
 <div align="center">
-  <img src="../videos/video_ejemplos_final.gif" width="85%">
+  <img src="../videos/video_ejemplos_final.gif" width="550">
   <p><em>Animación 3: Unpooling exacto y la vulnerabilidad de las métricas de error locales.</em></p>
 </div>
 
@@ -170,7 +173,7 @@ Aquí demostramos matemáticamente por qué optimizar el coeficiente de Dice ($\
 Las redes CNN estándar asumen que cada píxel es independiente; **son ciegas a la topología**. En la segmentación de meningiomas (bordes difusos y tejidos adyacentes similares), una U-Net podría lograr un 99% de precisión por píxel. Sin embargo, como probamos matemáticamente, ese 1% de error puede crear un agujero falso. Para una métrica volumétrica el error es mínimo, pero para la planificación quirúrgica, el error estructural es catastrófico.
 
 <div align="center">
-  <img src="../imágenes/bordes.png" width="70%">
+  <img src="../imágenes/bordes.png" width="500">
 </div>
 
 ### 4.2. La Filtración de Subnivel y TDA
@@ -196,5 +199,5 @@ La red aprende simultáneamente:
 2. Las reglas irrebatibles de topología global (de las PI).
 
 <div align="center">
-  <img src="../videos/evolucion_pool.gif" width="75%">
+  <img src="../videos/evolucion_pool.gif" width="500">
 </div>
