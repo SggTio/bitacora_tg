@@ -1,0 +1,484 @@
+\documentclass[10pt,twocolumn]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1.8cm]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+
+\definecolor{ca}{HTML}{6366F1}
+\definecolor{cb}{HTML}{10B981}
+\definecolor{cc}{HTML}{F59E0B}
+\definecolor{cd}{HTML}{EF4444}
+
+\newtheorem{definition}{Definition}[section]
+\newtheorem{proposition}[definition]{Proposition}
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{corollary}[definition]{Corollary}
+\newtheorem{remark}[definition]{Remark}
+\newtheorem{example}[definition]{Example}
+
+\title{\textbf{Shared Mathematical Foundations:}\\Neural Networks, U-Net, and Multi-Modal Segmentation Architectures}
+\author{TDA-SegUNet Thesis Project\\Pontificia Universidad Javeriana}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document formalizes the mathematical framework underlying neural network architectures for image segmentation. Beginning from first principles (linear maps, compositions, gradient descent), we build toward a rigorous description of the U-Net architecture and its multi-modal extensions (InputFusion, BottleneckFusion). Each definition is accompanied by both intuitive analogies and concrete numerical examples in 2D and 3D. The gradient separation principle is formalized as a theorem in the multi-task learning framework. This document serves as the shared mathematical language referenced by both the topology paper and the geometry paper of the thesis.
+\end{abstract}
+
+% ============================================================
+\section{Neural Networks as Compositions of Maps}
+
+\subsection{The Building Blocks}
+
+\begin{definition}[Affine Map]
+An affine map is a function $A_{W,b}: \mathbb{R}^n \to \mathbb{R}^m$ defined by
+\begin{equation}
+A_{W,b}(x) = Wx + b
+\end{equation}
+where $W \in \mathbb{R}^{m \times n}$ is the weight matrix and $b \in \mathbb{R}^m$ is the bias vector.
+\end{definition}
+
+\begin{example}[2D $\to$ 2D Affine Map]
+Let $W = \begin{pmatrix} 2 & -1 \\ 0 & 3 \end{pmatrix}$, $b = \begin{pmatrix} 1 \\ -1 \end{pmatrix}$. Then:
+\[
+A\begin{pmatrix} 1 \\ 2 \end{pmatrix} = \begin{pmatrix} 2 & -1 \\ 0 & 3 \end{pmatrix}\begin{pmatrix} 1 \\ 2 \end{pmatrix} + \begin{pmatrix} 1 \\ -1 \end{pmatrix} = \begin{pmatrix} 0 \\ 6 \end{pmatrix} + \begin{pmatrix} 1 \\ -1 \end{pmatrix} = \begin{pmatrix} 1 \\ 5 \end{pmatrix}
+\]
+The matrix $W$ stretches and shears space; the bias $b$ translates it.
+\end{example}
+
+\begin{remark}[Analogy: The Assembly Line]
+Think of an affine map as one station in an assembly line. The input $x$ arrives (raw material), $W$ reshapes it (cutting, bending), and $b$ shifts it (repositioning). A neural network is the entire assembly line: many stations in sequence.
+\end{remark}
+
+\begin{definition}[Activation Function]
+An activation function is a non-linear map $\sigma: \mathbb{R} \to \mathbb{R}$ applied element-wise. The Rectified Linear Unit (ReLU) is:
+\begin{equation}
+\sigma(z) = \max(0, z) = \begin{cases} z & \text{if } z > 0 \\ 0 & \text{if } z \leq 0 \end{cases}
+\end{equation}
+\end{definition}
+
+\begin{example}[ReLU on a Vector]
+$\sigma\begin{pmatrix} 1 \\ 5 \end{pmatrix} = \begin{pmatrix} \max(0,1) \\ \max(0,5) \end{pmatrix} = \begin{pmatrix} 1 \\ 5 \end{pmatrix}$. But $\sigma\begin{pmatrix} -3 \\ 2 \end{pmatrix} = \begin{pmatrix} 0 \\ 2 \end{pmatrix}$. ReLU ``kills'' negative values. Without it, composing affine maps yields another affine map (linear algebra), and the network cannot learn non-linear functions.
+\end{example}
+
+\begin{definition}[Feed-Forward Neural Network]
+A feed-forward neural network of depth $L$ is a composition:
+\begin{equation}
+f_\theta = A_L \circ \sigma \circ A_{L-1} \circ \sigma \circ \cdots \circ \sigma \circ A_1
+\end{equation}
+where $A_\ell = A_{W_\ell, b_\ell}$ are affine maps and $\theta = \{W_1, b_1, \ldots, W_L, b_L\}$ is the parameter set.
+\end{definition}
+
+\begin{example}[A 2-Layer Network: Step by Step]\label{ex:2layer}
+Let $f_\theta: \mathbb{R}^2 \to \mathbb{R}^1$ with $W_1 = \begin{pmatrix} 1 & -1 \\ 2 & 0 \end{pmatrix}$, $b_1 = \begin{pmatrix} 0 \\ -1 \end{pmatrix}$, $W_2 = \begin{pmatrix} 1 & 1 \end{pmatrix}$, $b_2 = (0)$.
+
+For input $x = \begin{pmatrix} 3 \\ 1 \end{pmatrix}$:
+
+\textbf{Layer 1 (affine):} $z_1 = W_1 x + b_1 = \begin{pmatrix} 2 \\ 5 \end{pmatrix}$
+
+\textbf{Layer 1 (activate):} $h_1 = \sigma(z_1) = \begin{pmatrix} 2 \\ 5 \end{pmatrix}$ (both positive)
+
+\textbf{Layer 2 (affine):} $f_\theta(x) = W_2 h_1 + b_2 = 7$
+
+Now for $x' = \begin{pmatrix} 0 \\ 3 \end{pmatrix}$: $z_1 = \begin{pmatrix} -3 \\ -1 \end{pmatrix}$, $h_1 = \begin{pmatrix} 0 \\ 0 \end{pmatrix}$, $f_\theta(x') = 0$. ReLU killed both negative pre-activations, collapsing the output to zero. This is how the network creates piecewise-linear decision boundaries.
+\end{example}
+
+\subsection{Universal Approximation}
+
+\begin{theorem}[Universal Approximation, Cybenko 1989; Hornik 1991]
+For any continuous function $g: K \to \mathbb{R}$ on a compact set $K \subset \mathbb{R}^n$ and any $\varepsilon > 0$, there exists a neural network $f_\theta$ with one hidden layer of sufficient width such that $\|f_\theta - g\|_\infty < \varepsilon$.
+\end{theorem}
+
+\begin{remark}
+This theorem says neural networks CAN approximate anything. It does NOT say they will LEARN to --- that depends on the optimization algorithm and training data. The gap between approximation theory and learning practice is exactly where architecture design matters.
+\end{remark}
+
+% ============================================================
+\section{Convolutional Operations}
+
+\subsection{Discrete Convolution on Images}
+
+\begin{definition}[2D Discrete Convolution]
+Given an image $I \in \mathbb{R}^{H \times W}$ and a kernel $K \in \mathbb{R}^{k \times k}$, the convolution is:
+\begin{equation}
+(I * K)(i,j) = \sum_{p=0}^{k-1} \sum_{q=0}^{k-1} K(p,q) \cdot I(i+p, j+q)
+\end{equation}
+This is a \emph{local} operation: the output at position $(i,j)$ depends only on a $k \times k$ neighborhood of $(i,j)$ in the input.
+\end{definition}
+
+\begin{example}[3$\times$3 Edge Detection]\label{ex:conv}
+Let $I = \begin{pmatrix} 0 & 0 & 0 & 0 \\ 0 & 1 & 1 & 0 \\ 0 & 1 & 1 & 0 \\ 0 & 0 & 0 & 0 \end{pmatrix}$ (a $4\times4$ image with a $2\times2$ white square) and the Laplacian kernel $K = \begin{pmatrix} 0 & -1 & 0 \\ -1 & 4 & -1 \\ 0 & -1 & 0 \end{pmatrix}$.
+
+Computing $(I * K)(1,1)$: center kernel at position $(1,1)$:
+\begin{align*}
+&0(0)+(-1)(0)+0(0) \\
++\,&(-1)(0)+4(1)+(-1)(1) \\
++\,&0(0)+(-1)(1)+0(1) = 2
+\end{align*}
+The non-zero output at $(1,1)$ indicates an edge. Interior pixels (like $(1,2)$ if the square were larger) would give 0 because the Laplacian detects curvature.
+\end{example}
+
+\begin{definition}[Multi-Channel Convolution]
+A convolutional layer maps $C_{\text{in}}$ input channels to $C_{\text{out}}$ output channels:
+\begin{equation}
+\text{Conv}_{W,b}(X)_{c,i,j} = \sum_{c'=1}^{C_{\text{in}}} \sum_{p,q} W_{c,c',p,q} \cdot X_{c',i+p,j+q} + b_c
+\end{equation}
+where $W \in \mathbb{R}^{C_{\text{out}} \times C_{\text{in}} \times k \times k}$ is a 4D tensor. Each output channel $c$ has its own set of $C_{\text{in}}$ kernels summed together.
+\end{definition}
+
+\begin{remark}[Analogy: The Translator]
+A single-channel convolution is like reading a page with a magnifying glass --- you see one local patch at a time. Multi-channel convolution is like having $C_{\text{out}}$ translators, each looking at the same page through $C_{\text{in}}$ colored filters. Each translator produces a different ``interpretation'' (feature map) of the same input.
+\end{remark}
+
+\begin{example}[Parameter Count]
+A Conv layer with $C_{\text{in}}=3$, $C_{\text{out}}=32$, $k=3$: parameters $= 32 \times 3 \times 3 \times 3 + 32 = 896$. This is the first layer of InputFusion, processing the 3-channel input (image + PI$_0$ + PI$_1$).
+\end{example}
+
+\subsection{Pooling and Spatial Reduction}
+
+\begin{definition}[Max Pooling]
+Max pooling with window $s \times s$ and stride $s$:
+\begin{equation}
+\text{Pool}(X)_{c,i,j} = \max_{0 \leq p,q < s} X_{c, si+p, sj+q}
+\end{equation}
+This reduces spatial dimensions by factor $s$ while preserving the strongest activation in each local window.
+\end{definition}
+
+\begin{example}[$2\times2$ Max Pooling]
+\[
+\text{Pool}\begin{pmatrix} 1 & 3 & 0 & 2 \\ 5 & 2 & 1 & 0 \\ 0 & 1 & 4 & 3 \\ 2 & 0 & 1 & 6 \end{pmatrix} = \begin{pmatrix} 5 & 2 \\ 2 & 6 \end{pmatrix}
+\]
+The $4\times4$ input becomes $2\times2$. Spatial detail is lost, but the dominant feature in each $2\times2$ block is retained.
+\end{example}
+
+% ============================================================
+\section{The U-Net Architecture}
+
+\subsection{Formal Definition}
+
+\begin{definition}[Encoder Block]\label{def:enc}
+An encoder block at level $\ell$ is:
+\begin{equation}
+E_\ell = \text{Pool}_{2\times2} \circ \sigma \circ \text{BN} \circ \text{Conv}_2 \circ \sigma \circ \text{BN} \circ \text{Conv}_1
+\end{equation}
+mapping $\mathbb{R}^{C_\ell \times H_\ell \times W_\ell} \to \mathbb{R}^{2C_\ell \times H_\ell/2 \times W_\ell/2}$.
+
+The \emph{pre-pooling} features (before $\text{Pool}$) are stored as the skip connection:
+\begin{equation}
+s_\ell = (\sigma \circ \text{BN} \circ \text{Conv}_2 \circ \sigma \circ \text{BN} \circ \text{Conv}_1)(X_\ell) \in \mathbb{R}^{2C_\ell \times H_\ell \times W_\ell}
+\end{equation}
+\end{definition}
+
+\begin{definition}[Decoder Block]\label{def:dec}
+A decoder block at level $\ell$ is:
+\begin{equation}
+D_\ell = \sigma \circ \text{BN} \circ \text{Conv}_2 \circ \sigma \circ \text{BN} \circ \text{Conv}_1 \circ \text{Cat}(\cdot, s_\ell) \circ \text{Up}
+\end{equation}
+where $\text{Up}$ is $2\times$ bilinear upsampling and $\text{Cat}(\cdot, s_\ell)$ concatenates along the channel dimension with the skip connection from the corresponding encoder level.
+\end{definition}
+
+\begin{definition}[U-Net]\label{def:unet}
+A U-Net of depth $L$ with initial channels $C_0$ is:
+\begin{equation}
+f_\theta = \sigma_{\text{out}} \circ \text{Conv}_{1\times1} \circ D_1 \circ D_2 \circ \cdots \circ D_L \circ B \circ E_L \circ \cdots \circ E_1
+\end{equation}
+where $B$ is the bottleneck (two convolutions without pooling), $\sigma_{\text{out}}$ is sigmoid, and $\text{Conv}_{1\times1}$ maps from $C_0$ channels to 1.
+\end{definition}
+
+\begin{remark}[Analogy: Compression and Reconstruction]
+The encoder is like writing a summary of a book: each level compresses the text (fewer pages = lower resolution) while highlighting key themes (more channels = richer features). The bottleneck is the most compressed summary. The decoder reconstructs the full book from the summary, using the skip connections as ``margin notes'' that preserve details lost during summarization.
+\end{remark}
+
+\subsection{Numerical Walkthrough: Tensor Shapes}
+
+\begin{example}[Our U-Net, $128\times128$ Input]\label{ex:shapes}
+With $L=3$, $C_0=1$ (Baseline):
+
+\begin{center}
+\begin{tabular}{lcr}
+\toprule
+\textbf{Stage} & \textbf{Shape} & \textbf{Params} \\
+\midrule
+Input & $1 \times 128 \times 128$ & --- \\
+$E_1$ skip & $32 \times 128 \times 128$ & --- \\
+$E_1$ out & $32 \times 64 \times 64$ & 9,280 \\
+$E_2$ skip & $64 \times 64 \times 64$ & --- \\
+$E_2$ out & $64 \times 32 \times 32$ & 55,552 \\
+$E_3$ skip & $128 \times 32 \times 32$ & --- \\
+$E_3$ out & $128 \times 16 \times 16$ & 221,440 \\
+$B$ & $256 \times 8 \times 8$ & 885,248 \\
+$D_3$ & $128 \times 16 \times 16$ & 663,808 \\
+$D_2$ & $64 \times 32 \times 32$ & 55,488 \\
+$D_1$ & $32 \times 64 \times 64$ & 13,920 \\
+Output & $1 \times 128 \times 128$ & 33 \\
+\midrule
+\textbf{Total} & & \textbf{1,926,433} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Note: 46\% of parameters are in the bottleneck ($B$). This is the ``information bottleneck'' where the most abstract representation lives.
+\end{example}
+
+\subsection{Skip Connections and Gradient Flow}
+
+\begin{proposition}[Gradient Highway]\label{prop:gradient}
+The gradient of the loss $\mathcal{L}$ with respect to encoder features at level $\ell$ has two paths:
+\begin{equation}
+\frac{\partial \mathcal{L}}{\partial e_\ell} = \underbrace{\frac{\partial \mathcal{L}}{\partial e_\ell}\bigg|_{\text{deep path}}}_{\text{through all deeper layers}} + \underbrace{\frac{\partial \mathcal{L}}{\partial e_\ell}\bigg|_{\text{skip path}}}_{\text{direct via Cat}}
+\end{equation}
+The skip path is ``short'' (passes through only the decoder level $\ell$ and the output layer), preventing vanishing gradients.
+\end{proposition}
+
+\begin{proof}[Proof sketch]
+Since $D_\ell$ receives $e_\ell$ via concatenation: $D_\ell = g(\text{Cat}(\text{Up}(d_{\ell+1}), e_\ell))$, the partial derivative $\partial D_\ell / \partial e_\ell$ includes the identity map on the concatenated channels (the skip simply copies $e_\ell$ into the decoder). The gradient through this path involves only the Jacobian of the convolutions in $D_\ell$ and the output layer, avoiding the product of Jacobians through the entire bottleneck.
+\end{proof}
+
+\begin{remark}[Analogy: Two Phone Lines]
+Without skip connections, a message from the encoder to the output must pass through every intermediate person (like a game of telephone) --- the message degrades. With skip connections, there's a direct line from each encoder level to its decoder counterpart. The decoder hears both the ``degraded'' deep message (semantic meaning) and the ``clear'' direct message (spatial detail).
+\end{remark}
+
+% ============================================================
+\section{Multi-Modal Architectures}
+
+\subsection{The Multi-Modal Segmentation Problem}
+
+Our segmentation task uses two modalities: the intensity image $I \in \mathbb{R}^{1 \times H \times W}$ and topological features $\tau = (\text{PI}_0, \text{PI}_1) \in \mathbb{R}^{2 \times H \times W}$. Three architectural strategies exist for combining them.
+
+\subsection{Baseline: Single-Modal Reference}
+
+\begin{definition}[BaselineUNet]
+\begin{equation}
+f_{\text{BL}}(I) = \text{UNet}(I), \quad I \in \mathbb{R}^{1 \times H \times W}
+\end{equation}
+Standard U-Net ignoring $\tau$. Parameters: $|\theta_{\text{BL}}| = 1{,}926{,}433$.
+\end{definition}
+
+\subsection{InputFusion: Early Concatenation}
+
+\begin{definition}[InputFusion]\label{def:if}
+\begin{equation}
+f_{\text{IF}}(I, \tau) = \text{UNet}(\text{Cat}(I, \text{PI}_0, \text{PI}_1))
+\end{equation}
+where $\text{Cat}: \mathbb{R}^{1 \times H \times W} \times \mathbb{R}^{2 \times H \times W} \to \mathbb{R}^{3 \times H \times W}$ is channel concatenation. A single encoder with $C_0 = 3$ processes all modalities. Parameters: $|\theta_{\text{IF}}| = 1{,}927{,}009$.
+\end{definition}
+
+\begin{example}[First Conv in InputFusion]
+The first Conv layer has kernel $W_1 \in \mathbb{R}^{32 \times 3 \times 3 \times 3}$. For output channel $c$ at position $(i,j)$:
+\begin{align}
+\text{out}_{c,i,j} &= \sum_{p,q} W_{c,\textcolor{cb}{0},p,q} \cdot \textcolor{cb}{I(i+p,j+q)} \nonumber \\
+&+ \sum_{p,q} W_{c,\textcolor{ca}{1},p,q} \cdot \textcolor{ca}{\text{PI}_0(i+p,j+q)} \nonumber \\
+&+ \sum_{p,q} W_{c,\textcolor{ca}{2},p,q} \cdot \textcolor{ca}{\text{PI}_1(i+p,j+q)} + b_c
+\end{align}
+\textcolor{cb}{Intensity} and \textcolor{ca}{topology} interact from the very first layer. The same 32 output channels must encode both spatial and topological information.
+\end{example}
+
+\subsection{BottleneckFusion: Dual Encoder}
+
+\begin{definition}[BottleneckFusion]\label{def:bf}
+\begin{equation}
+f_{\text{BF}}(I, \tau) = \text{Dec}(\text{Fuse}(E_{\text{sp}}(I), E_{\text{tp}}(\tau)))
+\end{equation}
+with two independent encoders:
+\begin{align}
+E_{\text{sp}} &: \mathbb{R}^{1 \times H \times W} \to \mathbb{R}^{256 \times \frac{H}{8} \times \frac{W}{8}} \quad \text{(spatial)} \\
+E_{\text{tp}} &: \mathbb{R}^{2 \times H \times W} \to \mathbb{R}^{128 \times \frac{H}{8} \times \frac{W}{8}} \quad \text{(topological)}
+\end{align}
+Fusion at the bottleneck:
+\begin{equation}
+\text{Fuse}(s, t) = \text{Conv}_{1\times1}(\text{Cat}(s, t)): \mathbb{R}^{384} \to \mathbb{R}^{256}
+\end{equation}
+
+\textbf{Key property:} $\theta_{\text{sp}} \cap \theta_{\text{tp}} = \emptyset$ (disjoint parameter sets). Skip connections come from $E_{\text{sp}}$ only. Parameters: $|\theta_{\text{BF}}| = 2{,}319{,}361$.
+\end{definition}
+
+\begin{example}[Fusion as Pointwise Linear Map]\label{ex:fusion}
+At spatial position $(i,j)$ in the bottleneck ($8\times8$), the fusion takes vector $v = \text{Cat}(s_{i,j}, t_{i,j}) \in \mathbb{R}^{384}$ and maps it to $\mathbb{R}^{256}$ via:
+\begin{equation}
+\text{Fuse}(v) = W_f v + b_f, \quad W_f \in \mathbb{R}^{256 \times 384}
+\end{equation}
+This is a \emph{pointwise} linear map --- the same matrix $W_f$ is applied independently at every spatial position. It learns which combinations of spatial features ($s$) and topological features ($t$) are relevant for segmentation.
+\end{example}
+
+\begin{remark}[Analogy: Two Experts]
+InputFusion is like one analyst reading a report that mixes financial data and market sentiment on the same page --- they must context-switch constantly. BottleneckFusion is like two specialists: a financial analyst and a market psychologist. Each reads their own data independently, then they meet in a boardroom (the bottleneck) to combine their insights into a single recommendation.
+\end{remark}
+
+\subsection{Architecture Comparison}
+
+\begin{table}[H]
+\centering
+\caption{Architectural comparison.}
+\label{tab:archcomp}
+\begin{tabular}{lccc}
+\toprule
+& \textbf{BL} & \textbf{IF} & \textbf{BF} \\
+\midrule
+Input channels & 1 & 3 & 1+2 \\
+Encoders & 1 & 1 & 2 \\
+Params & 1.93M & 1.93M & 2.32M \\
+Fusion point & --- & Input & Bottleneck \\
+Skip source & Single & Single & Spatial only \\
+$\theta$ overlap & --- & Full & $\emptyset$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\section{Loss Functions and Multi-Task Learning}
+
+\subsection{SoftDiceLoss}
+
+\begin{definition}[Soft Dice Loss]
+\begin{equation}
+\mathcal{L}_{\text{Dice}}(P, G) = 1 - \frac{2\sum_{i} P_i G_i + \varepsilon}{\sum_i P_i + \sum_i G_i + \varepsilon}
+\end{equation}
+where $P_i \in [0,1]$ is the predicted probability at pixel $i$, $G_i \in \{0,1\}$ is the ground truth, and $\varepsilon = 10^{-5}$ prevents division by zero.
+\end{definition}
+
+\begin{example}[Dice Computation]
+$P = (0.9, 0.8, 0.1, 0.2)$, $G = (1, 1, 0, 0)$.
+\begin{align*}
+\sum P_i G_i &= 0.9 + 0.8 = 1.7 \\
+\sum P_i &= 2.0, \quad \sum G_i = 2.0 \\
+\text{Dice} &= \frac{2(1.7)}{4.0} = 0.85, \quad \mathcal{L}_{\text{Dice}} = 0.15
+\end{align*}
+\end{example}
+
+\subsection{Betti Matching Loss}
+
+\begin{definition}[Betti Matching Loss, Stucki et al.\ 2023]
+Given prediction $P$ and ground truth $G$, define $C = \max(P, G)$. The inclusions $P \hookrightarrow C$ and $G \hookrightarrow C$ induce matchings on persistent homology. The loss penalizes unmatched features:
+\begin{equation}
+\mathcal{L}_{\text{BM}}(P, G) = \sum_{\substack{(b,d) \in \text{Dgm}(P) \\ \text{unmatched}}} (d-b)^2 + \sum_{\substack{(b',d') \in \text{Dgm}(G) \\ \text{unmatched}}} (d'-b')^2
+\end{equation}
+\end{definition}
+
+\subsection{The Gradient Conflict Problem}
+
+\begin{definition}[Multi-Task Loss]
+The combined training loss is:
+\begin{equation}
+\mathcal{L} = (1 - \lambda) \mathcal{L}_{\text{Dice}} + \lambda \mathcal{L}_{\text{BM}}
+\end{equation}
+with curriculum schedule: $\lambda = 0$ (warmup), $\lambda \in [0, 0.3]$ (ramp), $\lambda = 0.3$ (full).
+\end{definition}
+
+\begin{definition}[Gradient Conflict, Yu et al.\ 2020]\label{def:conflict}
+Two task gradients $g_A = \nabla_\theta \mathcal{L}_{\text{Dice}}$ and $g_B = \nabla_\theta \mathcal{L}_{\text{BM}}$ are in \emph{conflict} at parameter $\theta$ if:
+\begin{equation}
+\cos(g_A, g_B) = \frac{\langle g_A, g_B \rangle}{\|g_A\| \cdot \|g_B\|} < 0
+\end{equation}
+\end{definition}
+
+\begin{definition}[The Tragic Triad, Yu et al.\ 2020]\label{def:triad}
+Negative transfer in multi-task learning occurs when three conditions coincide:
+\begin{enumerate}[noitemsep]
+\item Conflicting gradients: $\cos(g_A, g_B) < 0$
+\item High positive curvature along the conflicting direction
+\item Magnitude imbalance: $\|g_A\| \gg \|g_B\|$
+\end{enumerate}
+\end{definition}
+
+% ============================================================
+\section{The Gradient Separation Principle}
+
+\begin{proposition}[Gradient Conflict in InputFusion]\label{prop:conflict}
+Let $p_c$ be a \emph{critical pixel} that is a false positive in the Dice sense ($P(p_c) > 0.5$, $G(p_c) = 0$) but topologically necessary (closing a gap that restores $\beta_1$). Then for any shared encoder parameter $w$ in InputFusion:
+\begin{equation}
+\text{sign}\left(\frac{\partial \mathcal{L}_{\text{Dice}}}{\partial w}\right) = -\text{sign}\left(\frac{\partial \mathcal{L}_{\text{BM}}}{\partial w}\right)
+\end{equation}
+at the critical pixel, creating gradient conflict.
+\end{proposition}
+
+\begin{proof}[Proof sketch]
+The Dice gradient pushes $P(p_c) \to G(p_c) = 0$ (reducing false positive). The Betti gradient pushes $P(p_c) \to 1$ (closing the topological gap). By the chain rule, these opposing pixel-level signals propagate to opposing parameter-level signals through any shared computational path.
+\end{proof}
+
+\begin{theorem}[Gradient Separation in BottleneckFusion]\label{thm:sep}
+In BottleneckFusion, the effective gradient conflict is structurally reduced:
+\begin{align}
+\cos(g_A^{\text{sp}}, g_B^{\text{sp}}) &\approx 0 \quad \text{(spatial encoder)} \\
+\cos(g_A^{\text{tp}}, g_B^{\text{tp}}) &> 0 \quad \text{(topological encoder)}
+\end{align}
+where $g_A^{\text{sp}} = \nabla_{\theta_{\text{sp}}} \mathcal{L}_{\text{Dice}}$ and $g_B^{\text{sp}} = \nabla_{\theta_{\text{sp}}} \mathcal{L}_{\text{BM}}$, etc.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+(1) The spatial encoder $E_{\text{sp}}$ processes only intensity $I$. The Betti loss gradient $\nabla_{\theta_{\text{sp}}} \mathcal{L}_{\text{BM}}$ must propagate through the fusion layer, the bottleneck, and the entire spatial encoder. This path \emph{dilutes} the topological signal across all spatial parameters --- most spatial parameters affect many pixels, not specifically critical ones. Thus $\|g_B^{\text{sp}}\|$ is small relative to $\|g_A^{\text{sp}}\|$, and their cosine similarity is near zero (approximately orthogonal).
+
+(2) The topological encoder $E_{\text{tp}}$ processes persistence images, which already encode topological information. Both the Dice gradient (which benefits from good topological features indirectly) and the Betti gradient (which benefits directly) push $E_{\text{tp}}$ toward better topological representations. Their gradients are aligned.
+
+Since neither encoder satisfies condition (1) of the Tragic Triad (Definition~\ref{def:triad}), negative transfer is avoided.
+\end{proof}
+
+\begin{corollary}
+BottleneckFusion is an \emph{architectural} solution to gradient conflict. It achieves structurally what PCGrad~\cite{yu2020} achieves algorithmically (gradient projection), but without runtime overhead.
+\end{corollary}
+
+\subsection{Empirical Verification}
+
+\begin{table}[H]
+\centering
+\caption{Evidence for gradient separation.}
+\label{tab:evidence}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Evidence} & \textbf{IF} & \textbf{BF} \\
+\midrule
+$\beta_1$ (dice+betti) & 0.010 & \textbf{0.000} \\
+$\beta_1$ (betti only) & 0.020 & \textbf{0.005} \\
+Dice (betti only) & 0.966 & \textbf{0.968} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Under pure Betti loss (no Dice supervision), BF maintains \emph{higher} Dice than IF (0.968 vs 0.966). This is counterintuitive: without Dice supervision, how does BF preserve pixel quality? Because the spatial encoder, receiving weak Betti gradients (near-zero cosine similarity), retains its learned spatial representations without topological corruption.
+
+% ============================================================
+\section{Evaluation Metrics}
+
+\begin{definition}[Betti Number Error]
+\begin{equation}
+\beta_k^{\text{err}} = |\beta_k(P_{\text{binary}}) - \beta_k(G)|
+\end{equation}
+where $\beta_k$ is the $k$-th Betti number computed on the binarized prediction ($P > 0.5$) and ground truth.
+\end{definition}
+
+\begin{definition}[Hausdorff Distance 95\%]
+\begin{equation}
+\text{HD}_{95}(P, G) = \text{percentile}_{95}\left(\max\left(\sup_{p \in \partial P} d(p, \partial G),\; \sup_{g \in \partial G} d(g, \partial P)\right)\right)
+\end{equation}
+This measures the 95th percentile of boundary distances, robust to outliers.
+\end{definition}
+
+\begin{remark}
+Dice measures \emph{volume overlap}, $\beta_k$ measures \emph{structural correctness}, HD95 measures \emph{boundary precision}. A complete evaluation requires all three: a segmentation can have perfect Dice with wrong topology, or perfect topology with poor boundary position.
+\end{remark}
+
+% ============================================================
+\begin{thebibliography}{12}
+\bibitem{ronneberger2015} Ronneberger, O., Fischer, P., Brox, T. (2015). U-Net: Convolutional Networks for Biomedical Image Segmentation. \emph{MICCAI}.
+\bibitem{etmann2023} Etmann, C. et al. (2023). A Unified Framework for U-Net Design and Analysis. arXiv:2305.19638.
+\bibitem{zhou2020} Zhou, D.-X. (2020). Universality of deep convolutional neural networks. \emph{ACHA}, 48(2), 787--794.
+\bibitem{cybenko1989} Cybenko, G. (1989). Approximation by superpositions of a sigmoidal function. \emph{MCSS}, 2, 303--314.
+\bibitem{stucki2023} Stucki, N. et al. (2023). Topologically Faithful Image Segmentation via Induced Matching. \emph{ICML}.
+\bibitem{yu2020} Yu, T. et al. (2020). Gradient Surgery for Multi-Task Learning. \emph{NeurIPS}.
+\bibitem{vandenhende2021} Vandenhende, S. et al. (2021). Multi-Task Learning for Dense Prediction Tasks: A Survey. \emph{IEEE TPAMI}.
+\bibitem{adams2017} Adams, H. et al. (2017). Persistence Images: A Stable Vector Representation. \emph{JMLR}, 18(8), 1--35.
+\bibitem{he2016} He, K. et al. (2016). Deep Residual Learning for Image Recognition. \emph{CVPR}.
+\bibitem{berger2025} Berger, C. et al. (2025). Pitfalls of Topology-Aware Image Segmentation. \emph{IPMI}.
+\end{thebibliography}
+
+\end{document}

@@ -1,0 +1,59 @@
+\relax 
+\providecommand \babel@aux [2]{\global \let \babel@toc \@gobbletwo }
+\@nameuse{bbl@beforestart}
+\catcode `"\active 
+\catcode `<\active 
+\catcode `>\active 
+\@nameuse{es@quoting}
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\babel@aux{spanish}{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Objetivo}{1}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Descripción Matemática de las Arquitecturas}{1}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Preliminares: U-Net}{1}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}BaselineUNet (Referencia)}{1}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}InputFusionTDASegUNet (Paper)}{1}{subsection.2.3}\protected@file@percent }
+\citation{stucki2023}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces InputFusion: concatenación de imagen + PI$_0$ + PI$_1$ como 3 canales de entrada a un solo encoder. La topología entra en la capa 1.}}{2}{figure.caption.2}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:inputfusion}{{1}{2}{InputFusion: concatenación de imagen + PI$_0$ + PI$_1$ como 3 canales de entrada a un solo encoder. La topología entra en la capa 1}{figure.caption.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}BottleneckFusionTDASegUNet (Propuesta)}{2}{subsection.2.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces BottleneckFusion: encoders espacial (izq.) y topológico (der.) independientes. Fusión solo en el bottleneck via Cat + Conv$_{1\times 1}$.}}{2}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:bottleneck}{{2}{2}{BottleneckFusion: encoders espacial (izq.) y topológico (der.) independientes. Fusión solo en el bottleneck via Cat + Conv$_{1\times 1}$}{figure.caption.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Pipeline TDA}{2}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Funciones de Pérdida}{2}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}SoftDiceLoss}{2}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}BettiMatchingLoss \cite  {stucki2023}}{2}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Entrenamiento Curricular}{3}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Configuración Experimental}{3}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Resultados}{3}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Tabla Completa}{3}{subsection.6.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Resultados de los 12 experimentos (9 originales + 3 corregidos). $\star $ indica cero errores.}}{3}{table.caption.4}\protected@file@percent }
+\newlabel{tab:results}{{1}{3}{Resultados de los 12 experimentos (9 originales + 3 corregidos). $\star $ indica cero errores}{table.caption.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Resultados Estratificados}{3}{subsection.6.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces BottleneckFusion dice+betti por dificultad.}}{3}{table.caption.5}\protected@file@percent }
+\newlabel{tab:stratified}{{2}{3}{BottleneckFusion dice+betti por dificultad}{table.caption.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Componentes de Pérdida}{3}{subsection.6.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Componentes de pérdida — BotFusion betti-only (corregido).}}{3}{table.caption.6}\protected@file@percent }
+\newlabel{tab:components}{{3}{3}{Componentes de pérdida — BotFusion betti-only (corregido)}{table.caption.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Análisis y Discusión}{3}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Hallazgo 1: Betti Matching reduce errores drásticamente}{3}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Hallazgo 2: BottleneckFusion supera a InputFusion}{3}{subsection.7.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Comparación directa en modo dice+betti.}}{3}{table.caption.7}\protected@file@percent }
+\newlabel{tab:headtohead}{{4}{3}{Comparación directa en modo dice+betti}{table.caption.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Hallazgo 3: Las PI son informativas por sí solas}{3}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Hallazgo 4: El modo betti-only revela el trade-off}{3}{subsection.7.4}\protected@file@percent }
+\bibcite{stucki2023}{1}
+\bibcite{ronneberger2015}{2}
+\bibcite{adams2017}{3}
+\bibcite{yu2020}{4}
+\bibcite{berger2025}{5}
+\bibcite{cohen2007}{6}
+\bibcite{etmann2023}{7}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.5}Principio de Separación de Gradientes}{4}{subsection.7.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.6}Corrección del Bug}{4}{subsection.7.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Limitaciones}{4}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {9}Conclusiones}{4}{section.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {10}Próximos Pasos}{4}{section.10}\protected@file@percent }
+\gdef \@abspage@last{4}

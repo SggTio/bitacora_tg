@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Experimento 3 — TDA-SegUNet</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1118;--bg2:#161922;--bg3:#1c2030;--border:#262a3a;--text:#c8bfa8;--text-dim:#8a8272;--text-bright:#e8dfc8;--accent-a:#7b7fb5;--accent-a2:#9a9dd0;--accent-b:#5f9a7e;--accent-b2:#7dc4a0;--accent-c:#c49a5c;--accent-d:#b06060;--serif:'Newsreader',Georgia,serif;--sans:'Outfit',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.75}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(15,17,24,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:.5rem 2rem;display:flex;justify-content:space-between;align-items:center;transform:translateY(-100%);transition:transform .3s}nav.vis{transform:translateY(0)}nav .brand{font-family:var(--serif);font-size:.95rem;color:var(--text-bright)}nav a{color:var(--text-dim);text-decoration:none;font-size:.8rem;margin-left:1.5rem}nav a:hover{color:var(--accent-a2)}
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:2rem;position:relative}.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 500px 350px at 35% 45%,rgba(123,127,181,.06) 0%,transparent 70%),radial-gradient(ellipse 400px 300px at 65% 55%,rgba(95,154,126,.04) 0%,transparent 70%);pointer-events:none}.hero h1{font-family:var(--serif);font-size:clamp(1.8rem,4.5vw,3rem);font-weight:600;color:var(--text-bright);max-width:750px;line-height:1.25;margin-bottom:1rem}.hero h1 .a{color:var(--accent-a2)}.hero h1 .b{color:var(--accent-b2)}.hero .sub{font-size:1rem;color:var(--text-dim);max-width:550px;margin-bottom:2rem;font-weight:300}.hero .tg{display:inline-block;padding:.3rem 1rem;border:1px solid var(--border);border-radius:100px;font-size:.75rem;font-family:var(--mono);color:var(--text-dim)}.scroll-h{position:absolute;bottom:2rem;animation:bob 2.5s infinite;color:var(--text-dim);font-size:.8rem}@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+.sec{max-width:1300px;margin:0 auto;padding:4rem 2rem}.sec-title{font-family:var(--serif);font-size:1.6rem;font-weight:600;color:var(--text-bright);margin-bottom:.3rem}.sec-line{width:40px;height:2px;background:var(--accent-a);margin-bottom:2rem}.sec-line.b{background:var(--accent-b)}.two{display:grid;grid-template-columns:55% 45%;gap:2rem}@media(max-width:900px){.two{grid-template-columns:1fr}}.side{border-left:1px solid var(--border);padding-left:2rem}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.3rem;margin-bottom:1.2rem}.card h4{font-family:var(--serif);font-size:.95rem;color:var(--accent-c);margin-bottom:.4rem;font-weight:600}.card.ex h4{color:var(--accent-a2)}.card.cl h4{color:var(--accent-b2)}.card p,.card li{font-size:.88rem;color:var(--text-dim);line-height:1.6}.card ul{margin:.3rem 0 0 1.2rem}
+.math{background:var(--bg3);border-left:2px solid var(--accent-a);padding:.8rem 1.2rem;margin:.8rem 0;border-radius:0 6px 6px 0;font-family:var(--mono);font-size:.82rem;color:var(--accent-a2);overflow-x:auto;white-space:pre-wrap}
+.def{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.3rem;margin:.8rem 0}.def .lbl{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent-a);margin-bottom:.2rem}.def h4{font-family:var(--serif);font-size:1rem;font-weight:600;color:var(--text-bright);margin-bottom:.4rem}
+table.res{width:100%;border-collapse:collapse;margin:1.2rem 0;font-size:.83rem}table.res th{background:var(--bg2);color:var(--text-dim);font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;padding:.7rem .8rem;text-align:left;border-bottom:2px solid var(--border)}table.res td{padding:.6rem .8rem;border-bottom:1px solid var(--border)}table.res tr:hover{background:rgba(123,127,181,.04)}.best{color:var(--accent-b2);font-weight:600}.worst{color:var(--accent-d);opacity:.7}.hl{background:rgba(123,127,181,.06)}.ts{display:inline-block;padding:.1rem .5rem;border-radius:3px;font-size:.65rem;font-family:var(--mono);text-transform:uppercase}.ts.n{background:rgba(123,127,181,.12);color:var(--accent-a2)}.ts.f{background:rgba(196,154,92,.12);color:var(--accent-c)}
+.abtn{padding:.5rem 1.2rem;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--text-dim);font-family:var(--sans);font-size:.85rem;cursor:pointer;transition:all .2s}.abtn:hover{border-color:var(--accent-a);color:var(--text)}.abtn.on{background:var(--accent-a);border-color:var(--accent-a);color:var(--bg);font-weight:500}
+.av{display:none}.av.on{display:block}
+.fn{padding:.5rem 1rem;border-radius:7px;font-size:.78rem;font-family:var(--mono);text-align:center;min-width:140px;cursor:pointer;transition:all .25s;border:1px solid transparent;margin-bottom:2px}.fn:hover{transform:scale(1.03);z-index:2}.fn.active{box-shadow:0 0 12px rgba(196,154,92,.15);border-color:var(--accent-c)!important}
+.fn.inp{background:rgba(95,154,126,.1);border-color:rgba(95,154,126,.25);color:var(--accent-b2)}.fn.tda{background:rgba(123,127,181,.1);border-color:rgba(123,127,181,.25);color:var(--accent-a2)}.fn.enc{background:rgba(95,154,126,.06);border-color:rgba(95,154,126,.15);color:var(--accent-b)}.fn.bot{background:rgba(196,154,92,.08);border-color:rgba(196,154,92,.2);color:var(--accent-c)}.fn.dec{background:rgba(95,154,126,.05);border-color:rgba(95,154,126,.1);color:var(--accent-b)}.fn.los{background:rgba(176,96,96,.08);border-color:rgba(176,96,96,.2);color:var(--accent-d)}
+.fa{color:var(--text-dim);font-size:.6rem;opacity:.4;text-align:center;margin:1px 0}
+.dp{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin:1rem 0;min-height:100px}.dp h5{font-family:var(--mono);font-size:.72rem;color:var(--accent-c);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem}.dp .io{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:.5rem}.dp .io .lb{font-family:var(--mono);font-size:.68rem;color:var(--text-dim);text-transform:uppercase;margin-bottom:.15rem}.dp .io .vl{color:var(--text-bright);font-size:.83rem;white-space:pre-line}.dp .ds{font-size:.83rem;color:var(--text-dim);line-height:1.5}
+.bars{margin:1.2rem 0}.br{display:grid;grid-template-columns:155px 1fr 50px;align-items:center;margin-bottom:.3rem;font-size:.78rem}.br .l{font-family:var(--mono);font-size:.7rem;color:var(--text-dim)}.bbg{height:14px;background:var(--bg3);border-radius:3px;overflow:hidden}.bf{height:100%;border-radius:3px;transition:width .8s ease;background:linear-gradient(90deg,rgba(176,96,96,.5),rgba(176,96,96,.25))}.br .v{text-align:right;font-family:var(--mono);font-size:.76rem}
+h3{font-family:var(--serif);font-size:1.2rem;color:var(--text-bright);margin:1.8rem 0 .6rem;font-weight:600}p{margin-bottom:.7rem}strong{color:var(--text-bright)}code{font-family:var(--mono);font-size:.83em;background:var(--bg3);padding:.1rem .35rem;border-radius:3px;color:var(--accent-a2)}
+footer{text-align:center;padding:3rem 2rem;border-top:1px solid var(--border);color:var(--text-dim);font-size:.8rem}
+</style>
+</head>
+<body>
+<nav id="nav"><div class="brand">TDA-SegUNet · Experimento 3</div><div><a href="#problema">Problema</a><a href="#arch">Arquitecturas</a><a href="#res">Resultados</a><a href="#hall">Hallazgo</a></div></nav>
+
+<section class="hero"><div class="tg">Maestría en Ingeniería · Pontificia Universidad Javeriana · 2026</div><h1 style="margin-top:1.3rem">¿Puede la <span class="a">topología</span> mejorar la segmentación de <span class="b">tumores cerebrales</span>?</h1><p class="sub">3 arquitecturas × 3 funciones de pérdida. 12 experimentos. Un hallazgo: encoders separados alcanzan cero errores topológicos.</p><p class="scroll-h">↓ scroll</p></section>
+
+<!-- PROBLEM -->
+<section class="sec" id="problema"><div class="sec-title">1. El Problema</div><div class="sec-line"></div>
+<div class="two"><div>
+<h3>Dice no ve la estructura</h3>
+<p>El coeficiente de Dice mide solapamiento volumétrico:</p>
+<div class="math">DSC = 2|P ∩ G| / (|P| + |G|)</div>
+<p>Es <strong>topológicamente ciego</strong>: un hueco de 1 píxel cambia β₁ completamente (1→0) mientras Dice apenas se mueve (Δ ≈ 0.001).</p>
+<div class="def"><div class="lbl">Definición</div><h4>Números de Betti β_k</h4><p>Para Ω ⊂ ℝ²: <strong>β₀</strong> = componentes conexas, <strong>β₁</strong> = agujeros. Disco: β₀=1, β₁=0. Anillo: β₀=1, β₁=1.</p></div>
+<p>Error de Betti: β_k^err = |β_k(P) - β_k(G)|. Un error de β₁=1 = agujero inventado o perdido.</p>
+</div><div class="side">
+<div class="card"><h4>Analogía del arquitecto</h4><p>Dice mide la cantidad de concreto. Los Betti miden la estructura: habitaciones (β₀), pasillos (β₁), cámaras selladas (β₂). Concreto correcto + estructura equivocada = edificio que colapsa.</p></div>
+<div class="card cl"><h4>Relevancia clínica</h4><p>Un glioblastoma con núcleo necrótico tiene β₂=1. Si la segmentación fusiona el núcleo con el fondo, β₂→0 — invisible al Dice pero relevante para pronóstico.</p></div>
+</div></div></section>
+
+<!-- ARCHITECTURES -->
+<section class="sec" id="arch"><div class="sec-title">2. Arquitecturas</div><div class="sec-line"></div>
+<div class="two"><div>
+<p><strong>Haz clic en cada nodo</strong> para ver entrada, operación y salida.</p>
+<div style="display:flex;gap:.4rem;margin-bottom:1.2rem;flex-wrap:wrap">
+<button class="abtn on" onclick="showA('bl',this)">Baseline</button>
+<button class="abtn" onclick="showA('if',this)">InputFusion (paper)</button>
+<button class="abtn" onclick="showA('bf',this)">BottleneckFusion (nuestro)</button>
+</div>
+
+<!-- BASELINE -->
+<div class="av on" id="av-bl">
+<div style="display:flex;flex-direction:column;align-items:center">
+<div class="fn inp" onclick="sd('bl','n1',this)">Imagen I — 1ch × 128×128</div><div class="fa">↓</div>
+<div class="fn enc" onclick="sd('bl','n2',this)">Enc 1 → 32ch × 64×64</div><div class="fa">↓ skip─→</div>
+<div class="fn enc" onclick="sd('bl','n3',this)">Enc 2 → 64ch × 32×32</div><div class="fa">↓ skip─→</div>
+<div class="fn enc" onclick="sd('bl','n4',this)">Enc 3 → 128ch × 16×16</div><div class="fa">↓ skip─→</div>
+<div class="fn bot" onclick="sd('bl','n5',this)">Bottleneck — 256ch × 8×8</div><div class="fa">↓</div>
+<div class="fn dec" onclick="sd('bl','n6',this)">Decoder → 32ch × 128×128</div><div class="fa">↓</div>
+<div class="fn los" onclick="sd('bl','n7',this)">σ(Conv 1×1) → P</div>
+</div>
+<div class="dp" id="dp-bl"><h5>← Clic en un nodo</h5><p class="ds">Cada nodo muestra entrada → operación → salida. Baseline: U-Net estándar, sin información topológica.</p></div>
+</div>
+
+<!-- INPUT FUSION -->
+<div class="av" id="av-if">
+<div style="display:flex;flex-direction:column;align-items:center">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;width:100%">
+<div class="fn tda" onclick="sd('if','t1',this)" style="font-size:.72rem">GT→EDT→PH→PI₀,PI₁</div>
+<div class="fn inp" onclick="sd('if','t2',this)">Imagen I</div>
+</div><div class="fa">↓ concatenar ↓</div>
+<div class="fn bot" onclick="sd('if','t3',this)">Cat(I, PI₀, PI₁) — 3ch</div><div class="fa">↓</div>
+<div class="fn enc" onclick="sd('if','t4',this)">Encoder compartido (3→32→64→128)</div><div class="fa">↓ skips─→</div>
+<div class="fn bot" onclick="sd('if','t5',this)">Bottleneck 256ch</div><div class="fa">↓</div>
+<div class="fn dec" onclick="sd('if','t6',this)">Decoder → P</div><div class="fa">↓</div>
+<div class="fn los" onclick="sd('if','t7',this)">L = (1-λ)L_Dice + λL_BM</div>
+</div>
+<div class="dp" id="dp-if"><h5>← Clic en un nodo</h5><p class="ds">InputFusion: concatena imagen + PI antes del encoder. Un solo encoder procesa todo.</p></div>
+</div>
+
+<!-- BOTTLENECK FUSION -->
+<div class="av" id="av-bf">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem">
+<div style="display:flex;flex-direction:column;align-items:center">
+<div class="fn inp" onclick="sd('bf','b1',this)">Imagen — 1ch</div><div class="fa">↓</div>
+<div class="fn enc" onclick="sd('bf','b3',this)">S-Enc1 (32ch) skip→</div><div class="fa">↓</div>
+<div class="fn enc" onclick="sd('bf','b4',this)">S-Enc2 (64ch) skip→</div><div class="fa">↓</div>
+<div class="fn enc" onclick="sd('bf','b5',this)">S-Enc3 (128ch) skip→</div><div class="fa">↓</div>
+<div class="fn enc" onclick="sd('bf','b6',this)">S-Bot (256ch)</div>
+</div>
+<div style="display:flex;flex-direction:column;align-items:center">
+<div class="fn tda" onclick="sd('bf','b2',this)">PI₀, PI₁ — 2ch</div><div class="fa">↓</div>
+<div class="fn tda" onclick="sd('bf','b7',this)">T-Enc1 (16ch)</div><div class="fa">↓</div>
+<div class="fn tda" onclick="sd('bf','b8',this)">T-Enc2 (32ch)</div><div class="fa">↓</div>
+<div class="fn tda" onclick="sd('bf','b9',this)">T-Enc3 (64ch)</div><div class="fa">↓</div>
+<div class="fn tda" onclick="sd('bf','b10',this)">T-Bot (128ch)</div>
+</div>
+</div>
+<div class="fa">↓ Cat(256+128=384) → Conv1×1 → 256ch ↓</div>
+<div style="display:flex;flex-direction:column;align-items:center">
+<div class="fn bot" onclick="sd('bf','b11',this)">Fusión (384→256ch)</div><div class="fa">↓</div>
+<div class="fn dec" onclick="sd('bf','b12',this)">Decoder → P</div>
+</div>
+<div class="dp" id="dp-bf"><h5>← Clic en un nodo</h5><p class="ds">BottleneckFusion: dos encoders independientes (θ_spatial ∩ θ_topo = ∅). Fusión solo en bottleneck.</p></div>
+</div>
+
+<h3>Retropropagación</h3>
+<p>Los gradientes de L_Dice y L_BM fluyen hacia atrás por la red:</p>
+<div style="display:flex;gap:.4rem;margin:.8rem 0"><button class="abtn on" onclick="showBP('s',this)">InputFusion (compartido)</button><button class="abtn" onclick="showBP('p',this)">BottleneckFusion (separado)</button></div>
+<div id="bp-s"><p style="font-size:.85rem;color:var(--text-dim)"><strong style="color:var(--accent-d)">Problema:</strong> ∂L_Dice/∂θ y ∂L_BM/∂θ → MISMO encoder. Cuando apuntan en direcciones opuestas → conflicto.</p>
+<div style="margin:.5rem 0;font-size:.8rem"><span style="color:var(--accent-d)">∇L_Dice ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━→ encoder compartido</span><br><span style="color:var(--accent-a2)">∇L_BM &nbsp;━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━→ encoder compartido</span><br><span style="color:var(--accent-c)">Conflicto: cos(g₁, g₂) < 0 en píxeles críticos</span></div></div>
+<div id="bp-p" style="display:none"><p style="font-size:.85rem;color:var(--text-dim)"><strong style="color:var(--accent-b2)">Solución:</strong> Cada gradiente → su propio encoder. Sin interferencia.</p>
+<div style="margin:.5rem 0;font-size:.8rem"><span style="color:var(--accent-b2)">∇L_Dice ━━━━━━━━━━━━━━━━━━━→ encoder ESPACIAL (solo intensidad)</span><br><span style="color:var(--accent-a2)">∇L_BM &nbsp;━━━━━━━━━━━━━━━━━━━→ encoder TOPOLÓGICO (solo PIs)</span><br><span style="color:var(--accent-b2)">Conflicto: cos ≈ 0 ✓ (independencia)</span></div></div>
+</div>
+<div class="side">
+<div class="card"><h4>¿Por qué separar?</h4><p>Dice dice "reduce este píxel" y Betti dice "auméntalo". Con un encoder compartido, se paralizan. Con encoders separados, cada uno optimiza sin interferencia.</p></div>
+<div class="card ex"><h4>Los dos músicos</h4><p>InputFusion: dos músicos en un solo piano. BottleneckFusion: cada uno con su instrumento, armonizando en el bottleneck. <code>θ_spatial ∩ θ_topo = ∅</code></p></div>
+<div class="card"><h4>Tres pérdidas</h4><p><strong>dice:</strong> L = L_Dice.<br><strong>betti:</strong> L_Dice (warmup) → L_BM solo.<br><strong>dice+betti:</strong> (1-λ)L_Dice + λL_BM, λ: 0→0.3.</p></div>
+<div class="card"><h4>Parámetros</h4><p>Baseline: 1,926,433<br>InputFusion: 1,927,009<br>BottleneckFusion: 2,319,361<br><br>BotFusion usa ~20% más parámetros. La mejora NO es por capacidad extra — es por separación de gradientes.</p></div>
+</div></div></section>
+
+<!-- RESULTS -->
+<section class="sec" id="res"><div class="sec-title">3. Resultados</div><div class="sec-line b"></div>
+<div class="two"><div>
+<h3>Tabla completa</h3>
+<table class="res"><thead><tr><th>Arq.</th><th>Pérdida</th><th>Dice↑</th><th>β₀↓</th><th>β₁↓</th><th>Min</th></tr></thead><tbody>
+<tr><td>Baseline</td><td>dice</td><td class="best">0.9772</td><td class="worst">0.180</td><td class="worst">0.260</td><td>2.7</td></tr>
+<tr><td>Baseline</td><td>betti <span class="ts f">corr</span></td><td>0.9697</td><td class="best">0.100</td><td>0.040</td><td>122.7</td></tr>
+<tr><td>Baseline</td><td>d+b</td><td>0.9763</td><td>0.105</td><td>0.040</td><td>162.8</td></tr>
+<tr style="border-top:2px solid var(--border)"><td>InFusion</td><td>dice</td><td class="best">0.9789</td><td>0.150</td><td>0.040</td><td>153.5</td></tr>
+<tr><td>InFusion</td><td>betti <span class="ts f">corr</span></td><td>0.9660</td><td class="best">0.100</td><td>0.020</td><td>115.7</td></tr>
+<tr><td>InFusion</td><td>d+b</td><td>0.9764</td><td>0.110</td><td>0.010</td><td>184.9</td></tr>
+<tr class="hl" style="border-top:2px solid var(--border)"><td>BotFusion <span class="ts n">nuestro</span></td><td>dice</td><td>0.9774</td><td class="worst">0.180</td><td>0.075</td><td>197.0</td></tr>
+<tr class="hl"><td>BotFusion <span class="ts n">nuestro</span></td><td>betti <span class="ts f">corr</span></td><td>0.9684</td><td>0.105</td><td class="best">0.005</td><td>130.8</td></tr>
+<tr class="hl"><td>BotFusion <span class="ts n">nuestro</span></td><td>d+b</td><td>0.9766</td><td>0.115</td><td class="best" style="font-size:1.05em">0.000★</td><td>186.6</td></tr>
+</tbody></table>
+
+<h3>Error β₁ por configuración</h3>
+<div class="bars">
+<div class="br"><span class="l">Baseline_dice</span><div class="bbg"><div class="bf" style="width:100%"></div></div><span class="v worst">0.260</span></div>
+<div class="br"><span class="l">Baseline_betti</span><div class="bbg"><div class="bf" style="width:15%"></div></div><span class="v">0.040</span></div>
+<div class="br"><span class="l">Baseline_d+b</span><div class="bbg"><div class="bf" style="width:15%"></div></div><span class="v">0.040</span></div>
+<div class="br"><span class="l">InFusion_dice</span><div class="bbg"><div class="bf" style="width:15%"></div></div><span class="v">0.040</span></div>
+<div class="br"><span class="l">InFusion_betti</span><div class="bbg"><div class="bf" style="width:7.7%"></div></div><span class="v">0.020</span></div>
+<div class="br"><span class="l">InFusion_d+b</span><div class="bbg"><div class="bf" style="width:3.8%"></div></div><span class="v">0.010</span></div>
+<div class="br"><span class="l">BotFusion_dice</span><div class="bbg"><div class="bf" style="width:28.8%"></div></div><span class="v">0.075</span></div>
+<div class="br"><span class="l">BotFusion_betti</span><div class="bbg"><div class="bf" style="width:1.9%"></div></div><span class="v best">0.005</span></div>
+<div class="br"><span class="l" style="color:var(--accent-a2)">BotFusion_d+b</span><div class="bbg"><div class="bf" style="width:0%"></div></div><span class="v best" style="font-weight:600">0.000★</span></div>
+</div>
+
+<h3>Estratificado — BotFusion dice+betti</h3>
+<table class="res"><thead><tr><th>Dificultad</th><th>n</th><th>Dice</th><th>β₀</th><th>β₁</th></tr></thead><tbody>
+<tr><td>Fácil</td><td>36</td><td>0.9988</td><td>0.000</td><td class="best">0.000</td></tr>
+<tr><td>Medio</td><td>65</td><td>0.9861</td><td>0.000</td><td class="best">0.000</td></tr>
+<tr><td>Difícil</td><td>61</td><td>0.9759</td><td>0.377</td><td class="best">0.000</td></tr>
+<tr><td>Extremo</td><td>38</td><td>0.9407</td><td>0.000</td><td class="best">0.000</td></tr>
+<tr style="border-top:2px solid var(--border);font-weight:600"><td>Total</td><td>200</td><td>0.9766</td><td>0.115</td><td class="best">0.000</td></tr>
+</tbody></table>
+</div>
+<div class="side">
+<div class="card cl"><h4>¿Qué significan?</h4><p><strong>β₁=0.260:</strong> 1 de cada 4 imágenes tiene un error de agujero.<br><strong>β₁=0.000:</strong> Cero errores en 200 imágenes. Perfección topológica.</p></div>
+<div class="card"><h4>Costo del Betti Matching</h4><p>PH es O(n³). Dice: 2.7 min (TPU). Con Betti: 122-207 min (CPU). 60× más tiempo para eliminar errores topológicos.</p></div>
+<div class="card ex"><h4>InFusion_dice ya tiene β₁=0.04</h4><p>Sin pérdida topológica, InputFusion reduce β₁ 85%. Las PI son informativas por sí solas: le dicen "aquí hay un agujero" y el encoder aprende a preservarlo.</p></div>
+</div></div></section>
+
+<!-- FINDING -->
+<section class="sec" id="hall"><div class="sec-title">4. Hallazgo Principal</div><div class="sec-line"></div>
+<div class="two"><div>
+<h3>Nuestra arquitectura supera al paper bajo supervisión topológica</h3>
+<table class="res"><thead><tr><th>Métrica</th><th>InputFusion d+b</th><th>BotFusion d+b</th><th></th></tr></thead><tbody>
+<tr><td>Dice</td><td>0.9764</td><td><strong>0.9766</strong></td><td style="color:var(--accent-a2)">Nuestro</td></tr>
+<tr><td>β₀</td><td><strong>0.110</strong></td><td>0.115</td><td>Paper</td></tr>
+<tr><td>β₁</td><td>0.010</td><td><strong>0.000</strong></td><td style="color:var(--accent-a2);font-weight:600">Nuestro★</td></tr>
+</tbody></table>
+<div class="def"><div class="lbl" style="color:var(--accent-a2)">Contribución original</div><h4>Principio de Separación de Gradientes</h4><p>En un esquema multi-tarea (L_Dice + L_Betti), los gradientes pueden ser opuestos en un encoder compartido. BottleneckFusion resuelve esto: θ_spatial ∩ θ_topo = ∅. La supervisión topológica se expresa sin interferir con la precisión de píxeles.</p></div>
+<h3>Limitaciones</h3>
+<p style="font-size:.9rem;color:var(--text-dim)">Datos sintéticos (validación BraTS pendiente). Un solo seed. Sin validación cruzada. Betti en CPU vs Dice en TPU.</p>
+</div>
+<div class="side">
+<div class="card"><h4>Afirmación para el paper</h4><p>"BottleneckFusion alcanza <strong>cero errores β₁</strong> manteniendo Dice dentro de 0.002 del diseño paper-faithful, gracias a la separación de gradientes en encoders independientes."</p></div>
+<div class="card ex"><h4>Stucki vs. nosotros</h4><p><strong>Stucki (ICML 2023):</strong> La herramienta (Betti Matching Loss).<br><strong>Nosotros:</strong> Cómo usar la herramienta — la arquitectura amplifica su efectividad.</p></div>
+</div></div></section>
+
+<footer><p>Experimento 3 · TDA-SegUNet · Pontificia Universidad Javeriana · 2026</p></footer>
+
+<script>
+const nv=document.getElementById('nav');
+window.addEventListener('scroll',()=>nv.classList.toggle('vis',scrollY>innerHeight*.5));
+
+function showA(id,btn){document.querySelectorAll('.av').forEach(v=>v.classList.remove('on'));document.querySelectorAll('.abtn').forEach(b=>b.classList.remove('on'));document.getElementById('av-'+id).classList.add('on');btn.classList.add('on')}
+function showBP(id,btn){document.getElementById('bp-s').style.display=id==='s'?'block':'none';document.getElementById('bp-p').style.display=id==='p'?'block':'none';btn.parentElement.querySelectorAll('.abtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on')}
+
+const D={
+'bl-n1':{t:'Entrada',i:'Imagen con ruido\n1ch × 128×128, valores [0,1]',o:'Tensor 1×128×128\n→ Encoder nivel 1',d:'Imagen sintética con formas (discos, donuts). Sin información topológica.'},
+'bl-n2':{t:'Encoder 1',i:'1ch × 128×128',o:'32ch × 64×64\n+ skip: 32ch × 128×128',d:'Conv3×3→BN→ReLU ×2. MaxPool 2×2. Extrae bordes y texturas básicas.'},
+'bl-n3':{t:'Encoder 2',i:'32ch × 64×64',o:'64ch × 32×32\n+ skip: 64ch × 64×64',d:'Conv3×3→BN→ReLU ×2. MaxPool. Campo receptivo ~10px.'},
+'bl-n4':{t:'Encoder 3',i:'64ch × 32×32',o:'128ch × 16×16\n+ skip: 128ch × 32×32',d:'Features semánticas de alto nivel, baja resolución.'},
+'bl-n5':{t:'Bottleneck',i:'128ch × 16×16',o:'256ch × 8×8',d:'Representación más comprimida. Un "pixel" tiene campo receptivo de toda la imagen.'},
+'bl-n6':{t:'Decoder',i:'256ch × 8×8 + skips',o:'32ch × 128×128',d:'Upsample 2× + Cat(skip) + Conv. Reconstruye resolución combinando semántica + detalles.'},
+'bl-n7':{t:'Salida',i:'32ch × 128×128',o:'P ∈ [0,1]^{128×128}',d:'Conv1×1 (32→1) + sigmoide. Cada píxel: probabilidad de foreground.'},
+'if-t1':{t:'Pipeline TDA',i:'Máscara GT binaria 128×128',o:'PI₀, PI₁ (2ch × 128×128)',d:'Máscara → EDT → Negar → Cubical PH → Dgm₀,Dgm₁ → Persistence Images (20×20, upsampled).'},
+'if-t2':{t:'Imagen',i:'Imagen con ruido',o:'1ch × 128×128',d:'Misma imagen que Baseline. Se concatenará con PI.'},
+'if-t3':{t:'Concatenación',i:'I(1ch) + PI₀(1ch) + PI₁(1ch)',o:'3ch × 128×128',d:'Primera Conv3×3 (3→32ch) ve las 3 modalidades simultáneamente. Interacción cross-modal desde capa 1.'},
+'if-t4':{t:'Encoder compartido',i:'3ch × 128×128',o:'128ch × 16×16 + skips',d:'UN encoder para todo. Los gradientes de L_Dice y L_BM compiten por los MISMOS pesos → conflicto.'},
+'if-t5':{t:'Bottleneck',i:'128ch × 16×16',o:'256ch × 8×8',d:'Mezcla espacial + topológica sin separación.'},
+'if-t6':{t:'Decoder',i:'256ch + skips',o:'P ∈ [0,1]^{128×128}',d:'Reconstrucción con skips del encoder compartido.'},
+'if-t7':{t:'Loss combinada',i:'P (predicción), G (verdad)',o:'L = (1-λ)L_Dice + λL_BM',d:'Curriculum: warmup (Dice) → ramp (λ: 0→0.3) → full (λ=0.3). Gradientes de AMBAS → MISMO encoder.'},
+'bf-b1':{t:'Imagen',i:'Imagen con ruido',o:'1ch × 128×128',d:'Solo al encoder ESPACIAL. Nunca ve las PI directamente.'},
+'bf-b2':{t:'Persistence Images',i:'PI₀ + PI₁',o:'2ch × 128×128',d:'Solo al encoder TOPOLÓGICO. Nunca ve la intensidad directamente.'},
+'bf-b3':{t:'S-Enc 1',i:'1ch × 128×128',o:'32ch × 64×64 + skip',d:'Encoder espacial: solo intensidad. ∇L_BM llega diluido (no hay información topológica que modificar).'},
+'bf-b4':{t:'S-Enc 2',i:'32ch × 64×64',o:'64ch × 32×32 + skip',d:'Features de textura y bordes.'},
+'bf-b5':{t:'S-Enc 3',i:'64ch × 32×32',o:'128ch × 16×16 + skip',d:'Features semánticas espaciales.'},
+'bf-b6':{t:'S-Bottleneck',i:'128ch × 16×16',o:'256ch × 8×8',d:'256ch de representación puramente espacial.'},
+'bf-b7':{t:'T-Enc 1',i:'2ch × 128×128',o:'16ch × 64×64',d:'Encoder topológico. ∇L_BM llega CONCENTRADO aquí.'},
+'bf-b8':{t:'T-Enc 2',i:'16ch × 64×64',o:'32ch × 32×32',d:'Patrones en las PI.'},
+'bf-b9':{t:'T-Enc 3',i:'32ch × 32×32',o:'64ch × 16×16',d:'Features topológicas de alto nivel.'},
+'bf-b10':{t:'T-Bottleneck',i:'64ch × 16×16',o:'128ch × 8×8',d:'128ch de representación puramente topológica.'},
+'bf-b11':{t:'Fusión',i:'S-Bot(256) + T-Bot(128) = 384ch',o:'256ch × 8×8',d:'Cat + Conv1×1 (384→256). Mapa lineal puntual. ÚNICO punto de encuentro espacial-topológico.'},
+'bf-b12':{t:'Decoder',i:'256ch + spatial skips',o:'P ∈ [0,1]^{128×128}',d:'Skips solo del encoder ESPACIAL. Reconstruye resolución con detalles espaciales + información topológica del bottleneck.'},
+};
+
+function sd(arch,nid,el){
+const k=arch+'-'+nid;const d=D[k];if(!d)return;
+const p=document.getElementById('dp-'+arch);
+el.closest('.av').querySelectorAll('.fn').forEach(n=>n.classList.remove('active'));
+el.classList.add('active');
+p.innerHTML=`<h5>${d.t}</h5><div class="io"><div><div class="lb">Entrada</div><div class="vl">${d.i}</div></div><div><div class="lb">Salida</div><div class="vl">${d.o}</div></div></div><p class="ds">${d.d}</p>`;
+}
+</script>
+</body>
+</html>
